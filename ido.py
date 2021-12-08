@@ -1,16 +1,25 @@
 from brainflow import BrainFlowInputParams, BoardShim, BoardIds
 import time
 from psychopy import visual, core
-from psychopy.visual import ShapeStim
+from psychopy.visual import ShapeStim, ImageStim
+import psychopy.event
+
+def main():
+    win = visual.Window(units="norm")
+    show_img(win, "right", 1)
+    show_img(win, "pause", 1)
+    show_img(win, "left", 1)
+    win.close()
 
 
-win = visual.Window()
-RightArrowVert = [(-0.4, 0.05), (-0.4, -0.05), (-.2, -0.05), (-.2, -0.1), (0, 0), (-.2, 0.1), (-.2, 0.05)]
-arrow = ShapeStim(win, vertices=RightArrowVert, fillColor='darkred', size=.5, lineColor='red')
-arrow.draw()
-win.update()
-core.wait(10)
-win.close()
+def show_img(win, img_name, seconds):
+    img_dict = {"right": ImageStim(win=win, image="./images/right.png", units="norm", size=2),
+                "left": ImageStim(win=win, image="./images/left.png", units="norm", size=2),
+                "pause": ImageStim(win=win, image="./images/pause.png", units="norm", size=2), }
+
+    img_dict[img_name].draw()
+    win.update()
+    core.wait(seconds)
 
 
 def create_board(id: int):
@@ -28,3 +37,6 @@ def record(n_trials=5):
     board.stop_stream()
     data = board.get_board_data()
     board.release_session()
+
+if __name__ == "__main__":
+    main()
