@@ -5,6 +5,8 @@ from psychopy.visual import ShapeStim, ImageStim
 import psychopy.event
 import numpy as np
 from brainflow.data_filter import DataFilter
+import os
+from datetime import date
 
 RIGHT = 1
 LEFT = 2
@@ -16,19 +18,28 @@ STIMULI = [RIGHT, LEFT, IDLE]
 IMAGES_DIR = "./images"
 RECORDINGS_DIR = "./recordings"
 
-stim_imgs = {
-    RIGHT: IMAGES_DIR + "/right.png",
-    LEFT: IMAGES_DIR + "/left.png",
-    IDLE: IMAGES_DIR + "/idle.png",
+STIM_IMG_PATHS = {
+    RIGHT: os.path.join(IMAGES_DIR, "right.png"),
+    LEFT: os.path.join(IMAGES_DIR, "left.png"),
+    IDLE: os.path.join(IMAGES_DIR, "idle.png"),
 }
 
+
 def main():
+    subj = input("Enter Subject Name: ")
     data = run_session()
-    DataFilter.write_file(data, RECORDINGS_DIR + '/test.csv', 'w')
+    save_data(data, subj)
+
+
+def save_data(data, subj):
+    filename = f'{date.today()}_{subj}.csv'
+    DataFilter.write_file(data, os.path.join(RECORDINGS_DIR, filename), 'w')
+
 
 def show_stimulus(win, stim):
-    ImageStim(win=win, image=stim_imgs[stim], units="norm", size=2).draw()
+    ImageStim(win=win, image=STIM_IMG_PATHS[stim], units="norm", size=2).draw()
     win.update()
+
 
 def create_board(id: int):
     params = BrainFlowInputParams()
@@ -36,14 +47,17 @@ def create_board(id: int):
     board.prepare_session()
     return board
 
-def run_session(trials_per_stim=1, stim_duration = 2, stim_gap=1):
+
+def run_session(trials_per_stim=1, stim_duration=2, stim_gap=1):
     trials = np.tile(STIMULI, trials_per_stim)
     np.random.shuffle(trials)
 
+    # start recording
     board_id = BoardIds.SYNTHETIC_BOARD.value
     board = create_board(board_id)
     board.start_stream()
 
+    # display trials
     win = visual.Window(units="norm")
     for t in trials:
         show_stimulus(win, t)
@@ -52,12 +66,13 @@ def run_session(trials_per_stim=1, stim_duration = 2, stim_gap=1):
         win.flip()
         time.sleep(stim_gap)
 
-    board.stop_stream()
+    # stop recording
     data = board.get_board_data()
+    board.stop_stream()
     board.release_session()
 
-    chans = BoardShim.get_eeg_channels(board_id)
     return data
+
 
 if __name__ == "__main__":
     main()
