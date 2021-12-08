@@ -17,7 +17,6 @@ LEFT_STOP = 4
 def insert_marker(board, marker):
     board.insert_marker(marker)  # insert the marker to the stream
 
-
 class EEG():
     """
     A class used to wrap all the communication with the OpenBCI EEG

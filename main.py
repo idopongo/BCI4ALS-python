@@ -11,7 +11,6 @@ def main():
     show_img(win, "left", 1)
     win.close()
 
-
 def show_img(win, img_name, seconds):
     img_dict = {"right": ImageStim(win=win, image="./images/right.png", units="norm", size=2),
                 "left": ImageStim(win=win, image="./images/left.png", units="norm", size=2),
@@ -29,7 +28,7 @@ def create_board(id: int):
     return board
 
 
-def record(n_trials=5):
+def start_session(n_trials=5):
     board = create_board(-1)
     board.start_stream()
     for i in range(n_trials):
