@@ -1,12 +1,11 @@
 from brainflow import BrainFlowInputParams, BoardShim, BoardIds
 import time
-from psychopy import visual, core
-from psychopy.visual import ShapeStim, ImageStim
-import psychopy.event
+from psychopy import visual
+from psychopy.visual import ImageStim
 import numpy as np
 from brainflow.data_filter import DataFilter
 import os
-from datetime import date
+from datetime import datetime
 
 RIGHT = 1
 LEFT = 2
@@ -32,7 +31,8 @@ def main():
 
 
 def save_data(data, subj):
-    filename = f'{date.today()}_{subj}.csv'
+    date_str = datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
+    filename = f'{date_str}_{subj}.csv'
     DataFilter.write_file(data, os.path.join(RECORDINGS_DIR, filename), 'w')
 
 
