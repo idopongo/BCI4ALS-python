@@ -1,55 +1,36 @@
-from brainflow import BrainFlowInputParams, BoardShim, BoardIds
-import time
+from brainflow import BrainFlowInputParams
 from psychopy import visual, core
 from psychopy.visual import ImageStim
 import numpy as np
-from brainflow.data_filter import DataFilter
 import os
 from datetime import datetime
-import pickle
 from pathlib import Path
-from enum import IntEnum
-
-BOARD_ID = BoardIds.SYNTHETIC_BOARD.value
-IMAGES_DIR = "./images"
-RECORDINGS_DIR = "./recordings"
-
-
-class Marker(IntEnum):
-    right = 1
-    left = 2
-    idle = 3
-    stop = 4
-
-    @property
-    def image_path(self):
-        return os.path.join(IMAGES_DIR, f'{self.name}.png')
-
-
-STIMULI_MARKERS = [Marker.right, Marker.left, Marker.idle]
+from Marker import Marker
+from constants import *
+import mne
 
 
 def main():
     subj = input("Enter Subject Name: ")
-    recording = run_session()
-    samples, labels = split_into_samples(recording)
-    save_session_data(subj, recording, samples)
+    trial_duration = 1
+    raw = run_session(trial_duration=trial_duration)
+    save_raw_and_epochs(raw, trial_duration, subj)
 
 
-def save_session_data(subj, recording, samples):
-    # Create folder for session
+def save_raw_and_epochs(raw, trial_duration, subj):
+    events = mne.find_events(raw, EVENT_CHAN_NAME)
+    epochs = mne.Epochs(raw, events, Marker.stimuli(), 0, trial_duration, picks="data", baseline=(0, 0))
+    folder_path = create_session_folder(subj)
+    raw.save(os.path.join(folder_path, "raw.fif"))
+    epochs.save(os.path.join(folder_path, "epo.fif"))
+
+
+def create_session_folder(subj):
     date_str = datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
     folder_name = f'{date_str}_{subj}'
     folder_path = os.path.join(RECORDINGS_DIR, folder_name)
     Path(folder_path).mkdir(exist_ok=True)
-
-    # Save Recording
-    recording_filename = f'{folder_name}_recording.csv'
-    DataFilter.write_file(recording, os.path.join(folder_path, recording_filename), 'w')
-
-    # Save Samples
-    samples_filename = f'{folder_name}_samples.p'
-    pickle.dump(samples, open(os.path.join(folder_path, samples_filename), "wb"))
+    return folder_path
 
 
 def show_stimulus(win, stim):
@@ -64,9 +45,9 @@ def create_board():
     return board
 
 
-def run_session(num_per_stim=1, stim_duration=1, stim_gap=1):
-    stimuli = np.tile(STIMULI_MARKERS, num_per_stim)
-    np.random.shuffle(stimuli)
+def run_session(trials_per_stim=3, trial_duration=1, trial_gap=1):
+    trial_stims = np.tile(Marker.stimuli(), trials_per_stim)
+    np.random.shuffle(trial_stims)
 
     # start recording
     board = create_board()
@@ -74,39 +55,31 @@ def run_session(num_per_stim=1, stim_duration=1, stim_gap=1):
 
     # display trials
     win = visual.Window(units="norm")
-    for stim in stimuli:
+    win.flip()
+    for stim in trial_stims:
         show_stimulus(win, stim)
         board.insert_marker(stim)
-        core.wait(stim_duration)
+        core.wait(trial_duration)
         win.flip()  # hide stimulus
-        board.insert_marker(Marker.stop)
-        core.wait(stim_gap)
+        board.insert_marker(Marker.STOP)
+        core.wait(trial_gap)
 
     # stop recording
-    recording = board.get_board_data()
+    raw = convert_to_mne(board.get_board_data())
     board.stop_stream()
     board.release_session()
 
-    return recording
+    return raw
 
 
-def split_into_samples(recording):
-    marker_channel = BoardShim.get_marker_channel(BOARD_ID)
-    signal_channels = BoardShim.get_eeg_channels(BOARD_ID)
-
-    signal = recording[signal_channels]
-    markers = recording[marker_channel]
-
-    # The indexes of the nonzero markers indicate stimuli start/end
-    marker_idxs = np.nonzero(markers)[0]
-
-    # Even markers mark the beginning of a stimuli, odd markers mark the end of a stimuli
-    even_markers = marker_idxs[::2]
-    odd_markers = marker_idxs[1::2]
-    labels = markers[even_markers]
-    samples = np.vstack([signal[:, pair[0]:pair[1]] for pair in zip(even_markers, odd_markers)])
-
-    return samples, labels
+def convert_to_mne(recording):
+    recording[EEG_CHANNELS] = recording[MARKER_CHANNEL] / 1e6  # BrainFlow returns uV, convert to V for MNE
+    data = recording[EEG_CHANNELS + [MARKER_CHANNEL]]
+    ch_types = (['eeg'] * len(EEG_CHANNELS)) + ['stim']
+    ch_names = EEG_CHAN_NAMES + [EVENT_CHAN_NAME]
+    info = mne.create_info(ch_names=ch_names, sfreq=FS, ch_types=ch_types)
+    raw = mne.io.RawArray(data, info)
+    return raw
 
 
 if __name__ == "__main__":
