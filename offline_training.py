@@ -8,7 +8,7 @@ import mne
 from time import sleep
 
 def run_session(trials_per_stim=3, trial_duration=1, trial_gap=1):
-    trial_stims = Marker.all() * trials_per_stim
+    trial_stims = np.tile(Marker.all(), trials_per_stim)
     np.random.shuffle(trial_stims)
 
     # start recording
