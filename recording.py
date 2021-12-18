@@ -8,8 +8,6 @@ from pathlib import Path
 from Marker import Marker
 from constants import *
 import mne
-from preprocessing import preprocess
-from classifier import create_classifier
 import json
 
 def main():
@@ -51,7 +49,7 @@ def run_session(trials_per_stim=3, trial_duration=1, trial_gap=1):
         board.insert_marker(stim)
         sleep(trial_duration)
         win.flip()  # hide stimulus
-
+    sleep(trial_gap)
     # stop recording
     raw = convert_to_mne(board.get_board_data())
     board.stop_stream()
