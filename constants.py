@@ -1,6 +1,6 @@
 from brainflow import BoardIds, BoardShim
 
-BOARD_ID = BoardIds.SYNTHETIC_BOARD
+BOARD_ID = BoardIds.CYTON_DAISY_BOARD
 IMAGES_DIR = "./images"
 RECORDINGS_DIR = "./recordings"
 EVENT_CHAN_NAME = "Stim Markers"

@@ -8,15 +8,13 @@ from pathlib import Path
 from Marker import Marker
 from constants import *
 import mne
-from preprocessing import preprocess
-from classifier import create_classifier
 import json
 
 def main():
     subj = input("Enter Subject Name: ")
     params = {
-        'trial_duration': 1,
-        'trials_per_stim': 1,
+        'trial_duration': 4,
+        'trials_per_stim': 5,
         'trial_gap': 1,
     }
     raw = run_session(**params)
@@ -36,7 +34,7 @@ def create_session_folder(subj):
     return folder_path
 
 def run_session(trials_per_stim=3, trial_duration=1, trial_gap=1):
-    trial_stims = np.tile(Marker.all(), trials_per_stim)
+    trial_stims = Marker.all() * trials_per_stim
     np.random.shuffle(trial_stims)
 
     # start recording
@@ -51,7 +49,7 @@ def run_session(trials_per_stim=3, trial_duration=1, trial_gap=1):
         board.insert_marker(stim)
         sleep(trial_duration)
         win.flip()  # hide stimulus
-
+    sleep(trial_gap)
     # stop recording
     raw = convert_to_mne(board.get_board_data())
     board.stop_stream()
@@ -67,6 +65,7 @@ def show_stimulus(win, stim):
 
 def create_board():
     params = BrainFlowInputParams()
+    params.serial_port = 'COM7'
     board = BoardShim(BOARD_ID, params)
     board.prepare_session()
     return board

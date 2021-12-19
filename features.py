@@ -1,5 +1,9 @@
 import numpy as np
-BANDS = [(1, 4), (4, 8), (8, 12), (12, 30)]
+from constants import *
+from mne_features.univariate import compute_pow_freq_bands
+
+FREQ_BANDS = [0.5, 4, 8, 13, 30, 100]
 
 def get_features(data):
-    return np.zeros((data.shape[0], 1))
+    band_power = np.array([compute_pow_freq_bands(FS, epoch, FREQ_BANDS) for epoch in data])
+    return band_power

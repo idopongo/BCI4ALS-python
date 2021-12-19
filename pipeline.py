@@ -8,9 +8,11 @@ from classifier import create_classifier
 
 def main():
     raw, params = load_recordings("David")
+    raw.plot()
     epochs, labels = get_epochs(raw, params["trial_duration"])
     features = get_features(epochs.get_data())
-    classifier = create_classifier(features, labels)
+    clf, acc = create_classifier(features, labels)
+    print(f'k-fold validation accuracy: {acc}')
 
 def get_epochs(raw, trial_duration):
     events = mne.find_events(raw)
