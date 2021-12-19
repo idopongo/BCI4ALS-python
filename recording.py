@@ -13,8 +13,8 @@ import json
 def main():
     subj = input("Enter Subject Name: ")
     params = {
-        'trial_duration': 1,
-        'trials_per_stim': 1,
+        'trial_duration': 4,
+        'trials_per_stim': 5,
         'trial_gap': 1,
     }
     raw = run_session(**params)
@@ -65,6 +65,7 @@ def show_stimulus(win, stim):
 
 def create_board():
     params = BrainFlowInputParams()
+    params.serial_port = 'COM7'
     board = BoardShim(BOARD_ID, params)
     board.prepare_session()
     return board

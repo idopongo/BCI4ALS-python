@@ -8,6 +8,7 @@ from classifier import create_classifier
 
 def main():
     raw, params = load_recordings("David")
+    raw.plot()
     epochs, labels = get_epochs(raw, params["trial_duration"])
     features = get_features(epochs.get_data())
     clf, acc = create_classifier(features, labels)
