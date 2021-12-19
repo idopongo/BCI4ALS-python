@@ -40,7 +40,8 @@ def run_session(trials_per_stim=3, trial_duration=1, trial_gap=1):
     # start recording
     board = create_board()
     board.start_stream()
-
+    #TODO: Add calibration text
+    sleep(5)
     # display trials
     win = visual.Window(units="norm")
     for stim in trial_stims:

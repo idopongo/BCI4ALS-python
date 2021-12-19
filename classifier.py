@@ -6,4 +6,4 @@ def create_classifier(features, labels):
     clf = LinearDiscriminantAnalysis()
     scores = cross_val_score(clf, features, labels, cv=3)
     clf.fit(features, labels)
-    return clf, np.mean(scores)
+    return clf, scores
