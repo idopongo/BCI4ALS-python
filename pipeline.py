@@ -10,10 +10,12 @@ import matplotlib
 matplotlib.use('Qt5Agg')
 
 def main():
-    raw, params = load_recordings("David3")
+    raw, params = load_recordings("David")
+    raw.pick(EEG_CHANNELS[:12] + [16])
     raw.load_data()
     raw.notch_filter(50, notch_widths=2)
-    raw.filter(0.5, 40)
+    raw.filter(2, 30)
+    raw.plot()
     epochs, labels = get_epochs(raw, params["trial_duration"])
     features = get_features(epochs.get_data())
     clf, acc = create_classifier(features, labels)
