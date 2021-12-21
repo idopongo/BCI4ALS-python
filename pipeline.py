@@ -3,12 +3,14 @@ from Marker import Marker
 from constants import *
 import os
 import json
+from preprocessing import preprocess
 from features import get_features
 from classifier import create_classifier
 
 def main():
-    raw, params = load_recordings("David")
-    raw.plot()
+    raw, params = load_recordings("David3")
+    raw.load_data()
+    raw = preprocess(raw)
     epochs, labels = get_epochs(raw, params["trial_duration"])
     features = get_features(epochs.get_data())
     clf, acc = create_classifier(features, labels)

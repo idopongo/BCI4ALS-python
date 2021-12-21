@@ -1,5 +1,12 @@
 from brainflow import BoardIds, BoardShim
 
+# Prerocessing
+NOTCH_FREQ = 50
+NOTCH_WIDTH = 2
+LOW_PASS = 0.5
+HIGH_PASS = 40
+
+
 BOARD_ID = BoardIds.CYTON_DAISY_BOARD
 IMAGES_DIR = "./images"
 RECORDINGS_DIR = "./recordings"
