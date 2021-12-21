@@ -20,6 +20,7 @@ def main():
     features = get_features(epochs.get_data())
     clf, acc = create_classifier(features, labels)
     print(f'k-fold validation accuracy: {acc}')
+    print('haggai')
 
 def get_epochs(raw, trial_duration):
     events = mne.find_events(raw)
