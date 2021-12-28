@@ -10,18 +10,14 @@ from constants import *
 import mne
 import json
 
-from pprint import pprint
-
 def main():
-    # subj = input("Enter Subject Name: ")
-    subj = 'haggai'
+    subj = input("Enter Subject Name: ")
     params = {
         'trial_duration': 4,
         'trials_per_stim': 1,
         'trial_gap': 1,
     }
     raw = run_session(**params)
-    # raw = run_session()
     save_raw(subj, raw, params)
 
 def save_raw(subj, raw, params):
@@ -39,7 +35,6 @@ def create_session_folder(subj):
 
 def run_session(trials_per_stim=3, trial_duration=1, trial_gap=1):
     trial_stims = Marker.all() * trials_per_stim
-    # print(Marker.all())
     np.random.shuffle(trial_stims)
     # start recording
     board = create_board()
@@ -51,13 +46,13 @@ def run_session(trials_per_stim=3, trial_duration=1, trial_gap=1):
     counter = 1
     total = len(trial_stims)
     for stim in trial_stims:
+        show_stim_progress(win, counter, total)
+        win.update()
         sleep(trial_gap)
         show_stimulus(win, stim)
-        show_stim_progress(win, counter, total)
         win.update()
         board.insert_marker(stim)
         sleep(trial_duration)
-        win.flip()  # hide stimulus
         counter = counter + 1
     sleep(trial_gap)
     # stop recording
@@ -73,9 +68,7 @@ def show_stim_progress(win,counter, total):
     txt.draw()
 
 def show_stimulus(win, stim):
-    image_temp = Marker(stim).image_path
     visual.ImageStim(win=win, image=Marker(stim).image_path, units="norm", size=2, color=(1, 1, 1)).draw()
-
 
 def create_board():
     params = BrainFlowInputParams()
@@ -83,7 +76,6 @@ def create_board():
     board = BoardShim(BOARD_ID, params)
     board.prepare_session()
     return board
-
 
 def convert_to_mne(recording):
     recording[EEG_CHANNELS] = recording[EEG_CHANNELS] / 1e6  # BrainFlow returns uV, convert to V for MNE
