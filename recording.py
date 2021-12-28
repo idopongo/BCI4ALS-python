@@ -49,10 +49,12 @@ def run_session(trials_per_stim=3, trial_duration=1, trial_gap=1):
         show_stim_progress(win, counter, total)
         win.update()
         sleep(trial_gap)
+        win.flip()
         show_stimulus(win, stim)
         win.update()
         board.insert_marker(stim)
         sleep(trial_duration)
+        win.flip()
         counter = counter + 1
     sleep(trial_gap)
     # stop recording
