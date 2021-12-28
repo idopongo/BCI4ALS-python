@@ -10,14 +10,18 @@ from constants import *
 import mne
 import json
 
+from pprint import pprint
+
 def main():
-    subj = input("Enter Subject Name: ")
+    # subj = input("Enter Subject Name: ")
+    subj = 'haggai'
     params = {
         'trial_duration': 4,
-        'trials_per_stim': 5,
+        'trials_per_stim': 1,
         'trial_gap': 1,
     }
     raw = run_session(**params)
+    # raw = run_session()
     save_raw(subj, raw, params)
 
 def save_raw(subj, raw, params):
@@ -35,21 +39,26 @@ def create_session_folder(subj):
 
 def run_session(trials_per_stim=3, trial_duration=1, trial_gap=1):
     trial_stims = Marker.all() * trials_per_stim
+    # print(Marker.all())
     np.random.shuffle(trial_stims)
-
     # start recording
     board = create_board()
     board.start_stream()
     #TODO: Add calibration text
     sleep(5)
     # display trials
-    win = visual.Window(units="norm")
+    win = visual.Window(units="norm", color=(1, 1, 1))
+    counter = 1
+    total = len(trial_stims)
     for stim in trial_stims:
         sleep(trial_gap)
         show_stimulus(win, stim)
+        show_stim_progress(win, counter, total)
+        win.update()
         board.insert_marker(stim)
         sleep(trial_duration)
         win.flip()  # hide stimulus
+        counter = counter + 1
     sleep(trial_gap)
     # stop recording
     raw = convert_to_mne(board.get_board_data())
@@ -58,10 +67,14 @@ def run_session(trials_per_stim=3, trial_duration=1, trial_gap=1):
 
     return raw
 
+def show_stim_progress(win,counter, total):
+    txt = visual.TextStim(win=win, text=f'{counter}/{total}', color=(0, 0, 0), bold=True, pos=(0, 0.8))
+    txt.font = 'arial'
+    txt.draw()
 
 def show_stimulus(win, stim):
-    visual.ImageStim(win=win, image=Marker(stim).image_path, units="norm", size=2).draw()
-    win.update()
+    image_temp = Marker(stim).image_path
+    visual.ImageStim(win=win, image=Marker(stim).image_path, units="norm", size=2, color=(1, 1, 1)).draw()
 
 
 def create_board():
