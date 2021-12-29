@@ -75,7 +75,7 @@ def show_stimulus(win, stim):
 
 def create_board():
     params = BrainFlowInputParams()
-    params.serial_port = 'COM12'
+    params.serial_port = 'COM7'
     board = BoardShim(BOARD_ID, params)
     board.prepare_session()
     return board
