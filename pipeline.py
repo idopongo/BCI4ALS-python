@@ -6,19 +6,16 @@ import json
 from preprocessing import preprocess
 from features import get_features
 from classifier import create_classifier
-import matplotlib
-
-matplotlib.use('Qt5Agg')
+import numpy as np
 
 def main():
-    raw, params = load_recordings("David3")
+    raw, params = load_recordings("David2")
     raw.load_data()
     raw = preprocess(raw)
     epochs, labels = get_epochs(raw, params["trial_duration"])
     features = get_features(epochs.get_data())
     clf, acc = create_classifier(features, labels)
-    print(f'k-fold validation accuracy: {acc}')
-    print('haggai')
+    print(f'k-fold validation accuracy: {np.mean(acc)}')
 
 def get_epochs(raw, trial_duration):
     events = mne.find_events(raw)

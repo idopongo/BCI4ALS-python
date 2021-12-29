@@ -2,9 +2,9 @@ from brainflow import BoardIds, BoardShim
 
 # Prerocessing
 NOTCH_FREQ = 50
-NOTCH_WIDTH = 2
-LOW_PASS = 0.5
-HIGH_PASS = 40
+NOTCH_WIDTH = 3
+LOW_PASS = 2
+HIGH_PASS = 30
 
 
 BOARD_ID = BoardIds.CYTON_DAISY_BOARD

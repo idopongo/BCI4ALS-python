@@ -6,3 +6,4 @@ pyserial~=3.5
 nptyping~=1.4.4
 mne~=0.24.1
 scikit-learn~=1.0.1
+matplotlib~=3.5.0
