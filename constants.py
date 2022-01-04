@@ -9,6 +9,7 @@ HIGH_PASS = 30
 # Paths
 IMAGES_DIR = "./images"
 RECORDINGS_DIR = "./recordings"
+RECORDING_PARAMS_PATH = "recording_params.json"
 
 # BrainFlow, Cyton
 BOARD_ID = BoardIds.CYTON_DAISY_BOARD
