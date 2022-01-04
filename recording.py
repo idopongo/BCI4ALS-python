@@ -39,8 +39,9 @@ def run_session(trials_per_stim=3, trial_duration=1, get_ready_duration=1, calib
     np.random.shuffle(trial_stims)
     # start recording
     board = create_board()
+    board.config_board(HARDWARE_SETTINGS_MSG)
     board.start_stream()
-    #TODO: Add calibration text
+    # TODO: Add calibration text
     sleep(5)
     # display trials
     win = visual.Window(units="norm", color=(1, 1, 1))
@@ -88,6 +89,7 @@ def convert_to_mne(recording):
     info = mne.create_info(ch_names=ch_names, sfreq=FS, ch_types=ch_types)
     raw = mne.io.RawArray(data, info)
     return raw
+
 
 if __name__ == "__main__":
     main()
