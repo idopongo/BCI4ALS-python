@@ -9,6 +9,7 @@ from Marker import Marker
 from constants import *
 import mne
 import json
+from serial.tools import list_ports
 
 
 def main():
@@ -84,7 +85,7 @@ def show_stimulus(win, stim):
 
 def create_board():
     params = BrainFlowInputParams()
-    params.serial_port = 'COM7'
+    params.serial_port = find_serial_port()
     board = BoardShim(BOARD_ID, params)
     board.prepare_session()
     return board
@@ -98,6 +99,17 @@ def convert_to_mne(recording):
     info = mne.create_info(ch_names=ch_names, sfreq=FS, ch_types=ch_types)
     raw = mne.io.RawArray(data, info)
     return raw
+
+
+def find_serial_port():
+    plist = list_ports.comports()
+    FTDIlist = [comport for comport in plist if comport.manufacturer == 'FTDI']
+    if len(FTDIlist) > 1:
+        raise LookupError(
+            "More than one FTDI-manufactured device is connected. Please enter serial_port manually.")
+    if len(FTDIlist) < 1:
+        raise LookupError("FTDI-manufactured device not found. Please check the dongle is connected")
+    return FTDIlist[0].name
 
 
 if __name__ == "__main__":
