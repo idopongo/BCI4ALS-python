@@ -9,9 +9,10 @@ HIGH_PASS = 30
 # Paths
 IMAGES_DIR = "./images"
 RECORDINGS_DIR = "./recordings"
+RECORDING_PARAMS_PATH = "recording_params.default.json"
 
 # BrainFlow, Cyton
-BOARD_ID = BoardIds.CYTON_DAISY_BOARD
+BOARD_ID = BoardIds.SYNTHETIC_BOARD
 # last 3 electrodes are turned off
 EEG_CHANNELS = BoardShim.get_eeg_channels(BOARD_ID)[:-3]
 EEG_CHAN_NAMES = BoardShim.get_eeg_names(BOARD_ID)[:-3]

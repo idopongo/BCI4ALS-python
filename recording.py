@@ -10,22 +10,19 @@ from constants import *
 import mne
 import json
 
-def main():
-    subj = input("Enter Subject Name: ")
-    params = {
-        'trial_duration': 4,
-        'trials_per_stim': 1,
-        'get_ready_duration': 3,
-        'calibration_duration': 1,
-    }
-    raw = run_session(**params)
-    save_raw(subj, raw, params)
 
-def save_raw(subj, raw, params):
-    folder_path = create_session_folder(subj)
+def main():
+    params = load_params()
+    raw = run_session(params)
+    save_raw(raw, params)
+
+
+def save_raw(raw, params):
+    folder_path = create_session_folder(params["subject"])
     raw.save(os.path.join(folder_path, "raw.fif"))
     with open(os.path.join(folder_path, "params.json"), 'w', encoding='utf-8') as f:
         json.dump(params, f, ensure_ascii=False, indent=4)
+
 
 def create_session_folder(subj):
     date_str = datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
@@ -34,8 +31,15 @@ def create_session_folder(subj):
     Path(folder_path).mkdir(exist_ok=True)
     return folder_path
 
-def run_session(trials_per_stim=3, trial_duration=1, get_ready_duration=1, calibration_duration=1):
-    trial_stims = Marker.all() * trials_per_stim
+
+def load_params():
+    with open(RECORDING_PARAMS_PATH) as file:
+        params = json.load(file)
+    return params
+
+
+def run_session(params):
+    trial_stims = Marker.all() * params["trials_per_stim"]
     np.random.shuffle(trial_stims)
     # start recording
     board = create_board()
@@ -50,29 +54,33 @@ def run_session(trials_per_stim=3, trial_duration=1, get_ready_duration=1, calib
     for stim in trial_stims:
         show_stim_progress(win, counter, total, stim)
         win.update()
-        sleep(get_ready_duration)
+        sleep(params["get_ready_duration"])
         win.flip()
-        sleep(calibration_duration)
+        sleep(params["calibration_duration"])
         show_stimulus(win, stim)
         win.update()
         board.insert_marker(stim)
-        sleep(trial_duration)
+        sleep(params["trial_duration"])
         win.flip()
         counter = counter + 1
-    sleep(get_ready_duration)
+    sleep(params["get_ready_duration"])
     # stop recording
     raw = convert_to_mne(board.get_board_data())
     board.stop_stream()
     board.release_session()
     return raw
 
-def show_stim_progress(win,counter, total, stim):
-    txt = visual.TextStim(win=win, text=f'trial {counter}/{total}\n get ready for {Marker(stim).name}', color=(0, 0, 0), bold=True, pos=(0, 0.8))
+
+def show_stim_progress(win, counter, total, stim):
+    txt = visual.TextStim(win=win, text=f'trial {counter}/{total}\n get ready for {Marker(stim).name}', color=(0, 0, 0),
+                          bold=True, pos=(0, 0.8))
     txt.font = 'arial'
     txt.draw()
 
+
 def show_stimulus(win, stim):
     visual.ImageStim(win=win, image=Marker(stim).image_path, units="norm", size=2, color=(1, 1, 1)).draw()
+
 
 def create_board():
     params = BrainFlowInputParams()
@@ -80,6 +88,7 @@ def create_board():
     board = BoardShim(BOARD_ID, params)
     board.prepare_session()
     return board
+
 
 def convert_to_mne(recording):
     recording[EEG_CHANNELS] = recording[EEG_CHANNELS] / 1e6  # BrainFlow returns uV, convert to V for MNE
