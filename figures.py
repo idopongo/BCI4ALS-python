@@ -15,3 +15,7 @@ def save_plots(rec_folder_name):
     fig_psd.savefig(os.path.join(fig_path, "psd.png"))
     fig_raw = mne.viz.plot_raw(raw, show=False)
     fig_raw.savefig(os.path.join(fig_path, "raw_data.png"))
+
+
+if __name__ == "__main__":
+    save_plots("2021-12-29--17-52-11_Ido")

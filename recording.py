@@ -38,8 +38,9 @@ def run_session(trials_per_stim=3, trial_duration=1, trial_gap=1):
     np.random.shuffle(trial_stims)
     # start recording
     board = create_board()
+    board.config_board(HARDWARE_SETTINGS_MSG)
     board.start_stream()
-    #TODO: Add calibration text
+    # TODO: Add calibration text
     sleep(5)
     # display trials
     win = visual.Window(units="norm", color=(1, 1, 1))
@@ -64,7 +65,7 @@ def run_session(trials_per_stim=3, trial_duration=1, trial_gap=1):
 
     return raw
 
-def show_stim_progress(win,counter, total):
+def show_stim_progress(win, counter, total):
     txt = visual.TextStim(win=win, text=f'{counter}/{total}', color=(0, 0, 0), bold=True, pos=(0, 0.8))
     txt.font = 'arial'
     txt.draw()
@@ -87,6 +88,7 @@ def convert_to_mne(recording):
     info = mne.create_info(ch_names=ch_names, sfreq=FS, ch_types=ch_types)
     raw = mne.io.RawArray(data, info)
     return raw
+
 
 if __name__ == "__main__":
     main()
