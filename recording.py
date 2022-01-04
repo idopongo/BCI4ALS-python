@@ -34,7 +34,7 @@ def create_session_folder(subj):
     Path(folder_path).mkdir(exist_ok=True)
     return folder_path
 
-def run_session(trials_per_stim=3, trial_duration=1, get_ready=1, calibration_duration=1):
+def run_session(trials_per_stim=3, trial_duration=1, get_ready_duration=1, calibration_duration=1):
     trial_stims = Marker.all() * trials_per_stim
     np.random.shuffle(trial_stims)
     # start recording
@@ -49,7 +49,7 @@ def run_session(trials_per_stim=3, trial_duration=1, get_ready=1, calibration_du
     for stim in trial_stims:
         show_stim_progress(win, counter, total, stim)
         win.update()
-        sleep(get_ready)
+        sleep(get_ready_duration)
         win.flip()
         sleep(calibration_duration)
         show_stimulus(win, stim)
@@ -58,7 +58,7 @@ def run_session(trials_per_stim=3, trial_duration=1, get_ready=1, calibration_du
         sleep(trial_duration)
         win.flip()
         counter = counter + 1
-    sleep(get_ready)
+    sleep(get_ready_duration)
     # stop recording
     raw = convert_to_mne(board.get_board_data())
     board.stop_stream()
