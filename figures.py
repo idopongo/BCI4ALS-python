@@ -27,13 +27,13 @@ def save_plots(rec_folder_name):
 
 
 def create_psd_fig(raw):
-    return mne.viz.plot_raw_psd(raw, fmax=HIGH_PASS, show=False)
+    return mne.viz.plot_raw_psd(raw, fmin=LOW_PASS, fmax=HIGH_PASS, show=False)
 
 
 def create_raw_fig(raw):
     events = mne.find_events(raw)
     event_dict = {marker.name: marker.value for marker in Marker}
-    fig = mne.viz.plot_raw(raw, events=events, clipping=None, show=False, event_id=event_dict)
+    fig = mne.viz.plot_raw(raw, events=events, clipping=None, show=False, event_id=event_dict, show_scrollbars=False)
     return fig
 
 
