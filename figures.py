@@ -8,15 +8,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 
+
 def save_plots(rec_folder_name):
     raw, rec_params = load_raw(rec_folder_name)
     fig_path = create_figures_folder(rec_folder_name)
 
-    fig_psd = create_psd_fig(raw)
-    fig_psd.savefig(os.path.join(fig_path, "psd.png"))
-
     fig_raw = create_raw_fig(raw)
     fig_raw.savefig(os.path.join(fig_path, "raw.png"))
+
+    fig_psd = create_psd_fig(raw)
+    fig_psd.savefig(os.path.join(fig_path, "psd.png"))
 
     chan = 3
     for cls_marker in Marker:
@@ -27,8 +28,12 @@ def save_plots(rec_folder_name):
 def create_psd_fig(raw):
     return mne.viz.plot_raw_psd(raw, fmax=HIGH_PASS, show=False)
 
+
 def create_raw_fig(raw):
-    return mne.viz.plot_raw(raw, show=False)
+    events = mne.find_events(raw)
+    event_dict = {marker.name: marker.value for marker in Marker}
+    fig = mne.viz.plot_raw(raw, events=events, scalings="auto", clipping=None, show=False, event_id=event_dict)
+    return fig
 
 
 def create_figures_folder(rec_folder_name):
@@ -36,6 +41,7 @@ def create_figures_folder(rec_folder_name):
     fig_path = os.path.join(rec_folder_path, "figures")
     Path(fig_path).mkdir(exist_ok=True)
     return fig_path
+
 
 def load_raw(rec_folder_name):
     rec_folder_path = os.path.join(RECORDINGS_DIR, rec_folder_name)
@@ -45,14 +51,16 @@ def load_raw(rec_folder_name):
         rec_params = json.load(file)
     return raw, rec_params
 
+
 def create_class_spectrogram_fig(raw, rec_params, cls_marker, chan):
     events = mne.find_events(raw)
     time_before_stim = 1
-    epochs = mne.Epochs(raw, events, Marker.all(), tmin=-time_before_stim, tmax=rec_params["trial_duration"], picks="data")
+    epochs = mne.Epochs(raw, events, Marker.all(), tmin=-time_before_stim, tmax=rec_params["trial_duration"],
+                        picks="data")
     cls_epochs = epochs[str(cls_marker.value)].load_data().pick([chan])
 
-    nperseg = int(125/5)
-    range = (2, 40)
+    nperseg = int(125 / 5)
+    freq_range = (2, 40)
 
     _, _, total_pow = signal.spectrogram(cls_epochs.next().squeeze(), FS, nperseg=nperseg, scaling="spectrum")
     for epoch in cls_epochs[1:]:
@@ -60,8 +68,8 @@ def create_class_spectrogram_fig(raw, rec_params, cls_marker, chan):
         freq, time, power = signal.spectrogram(data, FS, nperseg=nperseg, scaling="spectrum")
         total_pow = total_pow + power
 
-    avg_power = total_pow/len(cls_epochs)
-    freq_idxs = (freq >= range[0]) & (freq <= range[1])
+    avg_power = total_pow / len(cls_epochs)
+    freq_idxs = (freq >= freq_range[0]) & (freq <= freq_range[1])
     freq = freq[freq_idxs]
     avg_power = avg_power[freq_idxs]
 
@@ -74,3 +82,8 @@ def create_class_spectrogram_fig(raw, rec_params, cls_marker, chan):
     plt.legend()
     plt.title(f'Average spectrogram\n class: {cls_marker.name}, electrode: {EEG_CHAN_NAMES[chan]}')
     return fig
+
+
+if __name__ == "__main__":
+    rec_folder_name = "2021-12-22--15-07-34_David2"
+    save_plots(rec_folder_name)
