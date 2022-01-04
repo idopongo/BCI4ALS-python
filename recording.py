@@ -15,7 +15,8 @@ def main():
     params = {
         'trial_duration': 4,
         'trials_per_stim': 1,
-        'trial_gap': 1,
+        'get_ready_duration': 3,
+        'calibration_duration': 1,
     }
     raw = run_session(**params)
     save_raw(subj, raw, params)
@@ -33,7 +34,7 @@ def create_session_folder(subj):
     Path(folder_path).mkdir(exist_ok=True)
     return folder_path
 
-def run_session(trials_per_stim=3, trial_duration=1, trial_gap=1):
+def run_session(trials_per_stim=3, trial_duration=1, get_ready_duration=1, calibration_duration=1):
     trial_stims = Marker.all() * trials_per_stim
     np.random.shuffle(trial_stims)
     # start recording
@@ -47,26 +48,26 @@ def run_session(trials_per_stim=3, trial_duration=1, trial_gap=1):
     counter = 1
     total = len(trial_stims)
     for stim in trial_stims:
-        show_stim_progress(win, counter, total)
+        show_stim_progress(win, counter, total, stim)
         win.update()
-        sleep(trial_gap)
+        sleep(get_ready_duration)
         win.flip()
+        sleep(calibration_duration)
         show_stimulus(win, stim)
         win.update()
         board.insert_marker(stim)
         sleep(trial_duration)
         win.flip()
         counter = counter + 1
-    sleep(trial_gap)
+    sleep(get_ready_duration)
     # stop recording
     raw = convert_to_mne(board.get_board_data())
     board.stop_stream()
     board.release_session()
-
     return raw
 
-def show_stim_progress(win, counter, total):
-    txt = visual.TextStim(win=win, text=f'{counter}/{total}', color=(0, 0, 0), bold=True, pos=(0, 0.8))
+def show_stim_progress(win,counter, total, stim):
+    txt = visual.TextStim(win=win, text=f'trial {counter}/{total}\n get ready for {Marker(stim).name}', color=(0, 0, 0), bold=True, pos=(0, 0.8))
     txt.font = 'arial'
     txt.draw()
 
