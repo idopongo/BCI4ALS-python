@@ -74,4 +74,3 @@ def create_class_spectrogram_fig(raw, rec_params, cls_marker, chan):
     plt.legend()
     plt.title(f'Average spectrogram\n class: {cls_marker.name}, electrode: {EEG_CHAN_NAMES[chan]}')
     return fig
-
