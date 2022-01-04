@@ -3,7 +3,7 @@ from brainflow import BoardIds, BoardShim
 # Preprocessing
 NOTCH_FREQ = 50
 NOTCH_WIDTH = 3
-LOW_PASS = 2
+LOW_PASS = 7
 HIGH_PASS = 30
 
 # Paths
