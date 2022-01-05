@@ -15,7 +15,7 @@ RECORDING_PARAMS_PATH = "recording_params.json"
 BOARD_ID = BoardIds.CYTON_DAISY_BOARD
 # last 3 electrodes are turned off
 EEG_CHANNELS = BoardShim.get_eeg_channels(BOARD_ID)[:-3]
-EEG_CHAN_NAMES = BoardShim.get_eeg_names(BOARD_ID)[:-3]
+EEG_CHAN_NAMES = ["C3", "C4", "Cz", "FC1", "FC2", "FC5", "FC6", "CP1", "CP2", "CP5", "CP6", "O1", "O2"]
 MARKER_CHANNEL = BoardShim.get_marker_channel(BOARD_ID)
 EVENT_CHAN_NAME = "Stim Markers"
 FS = BoardShim.get_sampling_rate(BOARD_ID)
