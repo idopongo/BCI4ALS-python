@@ -98,6 +98,7 @@ def convert_to_mne(recording):
     ch_names = EEG_CHAN_NAMES + [EVENT_CHAN_NAME]
     info = mne.create_info(ch_names=ch_names, sfreq=FS, ch_types=ch_types)
     raw = mne.io.RawArray(data, info)
+    raw.set_montage("standard_1020")
     return raw
 
 
