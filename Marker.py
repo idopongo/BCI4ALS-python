@@ -2,10 +2,11 @@ from enum import IntEnum, unique
 from constants import IMAGES_DIR
 import os
 
+
 @unique
 class Marker(IntEnum):
-    RIGHT = 1
     LEFT = 2
+    RIGHT = 1
     IDLE = 3
 
     @property

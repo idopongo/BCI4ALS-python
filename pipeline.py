@@ -12,7 +12,6 @@ import scipy.io
 
 def main():
     raw, params = load_recordings("David2")
-    raw.load_data()
     raw = preprocess(raw)
     epochs, labels = get_epochs(raw, params["trial_duration"])
     features = get_features(epochs.get_data())
