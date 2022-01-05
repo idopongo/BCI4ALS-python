@@ -33,7 +33,8 @@ def create_psd_fig(raw):
 def create_raw_fig(raw):
     events = mne.find_events(raw)
     event_dict = {marker.name: marker.value for marker in Marker}
-    fig = mne.viz.plot_raw(raw, events=events, clipping=None, show=False, event_id=event_dict, show_scrollbars=False)
+    fig = mne.viz.plot_raw(raw, events=events, clipping=None, show=False, event_id=event_dict)
+    plt.show()
     return fig
 
 
@@ -98,5 +99,5 @@ def create_class_spectrogram_fig(raw, rec_params, electrodes):
 
 
 if __name__ == "__main__":
-    rec_folder_name = "2021-12-22--15-07-34_David2"
+    rec_folder_name = "2022-01-05--15-58-18_Haggai"
     save_plots(rec_folder_name)
