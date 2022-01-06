@@ -8,11 +8,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 from preprocessing import preprocess
+from pipeline import get_subject_rec_folders
 
 
-def save_plots(rec_folder_name):
+def save_plots(rec_folder_name, bad_electrodes=[]):
     raw, rec_params = load_raw(rec_folder_name)
     raw = preprocess(raw)
+    raw.info['bads'] = bad_electrodes
 
     fig_path = create_figures_folder(rec_folder_name)
 
@@ -22,12 +24,14 @@ def save_plots(rec_folder_name):
     fig_psd = create_psd_fig(raw)
     fig_psd.savefig(os.path.join(fig_path, "psd.png"))
 
-    class_spectrogram_fig = create_class_spectrogram_fig(raw, rec_params, ["C3", "C4"])
-    class_spectrogram_fig.savefig(os.path.join(fig_path, f'class_spectrogram.png'))
+    electrodes = ["C3", "C4", "Cz"]
+    class_spectrogram_fig = create_class_spectrogram_fig(raw, rec_params, electrodes)
+    class_spectrogram_fig.savefig(os.path.join(fig_path, f'class_spectrogram_{"_".join(electrodes)}.png'))
 
 
 def create_psd_fig(raw):
-    return mne.viz.plot_raw_psd(raw, fmin=LOW_PASS, fmax=HIGH_PASS, show=False)
+    fig = mne.viz.plot_raw_psd(raw, fmin=LOW_PASS, fmax=HIGH_PASS, show=False)
+    return fig
 
 
 def create_raw_fig(raw):
@@ -98,6 +102,10 @@ def create_class_spectrogram_fig(raw, rec_params, electrodes):
     return fig
 
 
+def save_plots_for_subject(subject_name):
+    rec_folders = get_subject_rec_folders(subject_name)
+    [save_plots(folder) for folder in rec_folders]
+
+
 if __name__ == "__main__":
-    rec_folder_name = "2022-01-05--15-58-18_Haggai"
-    save_plots(rec_folder_name)
+    save_plots_for_subject("Haggai")

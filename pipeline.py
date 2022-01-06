@@ -5,15 +5,17 @@ import os
 import json
 from preprocessing import preprocess
 from features import get_features
-from classifier import create_classifier
+from classifier import create_classifier, csp_test
 import numpy as np
 import scipy.io
 
 
 def main():
-    raw, params = load_recordings("David2")
+    raw, params = load_recordings("Haggai")
     raw = preprocess(raw)
     epochs, labels = get_epochs(raw, params["trial_duration"])
+    epochs.load_data()
+    epochs.crop(tmin=1)
     features = get_features(epochs.get_data())
     clf, acc = create_classifier(features, labels)
     print(f'k-fold validation accuracy: {np.mean(acc)}')
@@ -21,20 +23,25 @@ def main():
 
 def get_epochs(raw, trial_duration):
     events = mne.find_events(raw)
-    # TODO: add proper baseline
-    epochs = mne.Epochs(raw, events, Marker.all(), tmin=0, tmax=trial_duration, picks="data", baseline=(0, 0))
+    epochs = mne.Epochs(raw, events, Marker.all(), tmin=-1, tmax=trial_duration, picks="data", baseline=(-1, 0))
     labels = epochs.events[:, -1]
     return epochs, labels
 
 
 def load_recordings(subj):
-    recs = os.listdir(RECORDINGS_DIR)
-    subj_recs = [rec for rec in recs if rec.split("_")[1] == subj]
+    subj_recs = get_subject_rec_folders(subj)
     raws = [mne.io.read_raw_fif(os.path.join(RECORDINGS_DIR, rec, 'raw.fif')) for rec in subj_recs]
     with open(os.path.join(RECORDINGS_DIR, subj_recs[0], 'params.json')) as file:
         params = json.load(file)
     all_raw = mne.io.concatenate_raws(raws)
+    print(subj_recs)
     return all_raw, params
+
+
+def get_subject_rec_folders(subj):
+    recs = os.listdir(RECORDINGS_DIR)
+    subj_recs = [rec for rec in recs if rec.split("_")[1] == subj]
+    return subj_recs
 
 
 def matlab_data_pipeline():
