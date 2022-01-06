@@ -11,7 +11,7 @@ import scipy.io
 
 
 def main():
-    raw, params = load_recordings("Haggai")
+    raw, params = load_recordings("Ido")
     raw = preprocess(raw)
     epochs, labels = get_epochs(raw, params["trial_duration"])
     epochs.load_data()
