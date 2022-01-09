@@ -10,11 +10,20 @@ from constants import *
 import mne
 import json
 from serial.tools import list_ports
+from preprocessing import preprocess
+from features import get_features
+import pickle
+
 
 
 def main():
     params = load_params()
-    raw = run_session(params)
+    classifier_filename = os.path.join(CLASSIFIERS_DIR, "classifier_Haggai_1.pickle")
+    online = True
+    classifier = []
+    if online:
+        classifier = get_classifier(classifier_filename)
+    raw = run_session(params, online, classifier)
     save_raw(raw, params)
 
 
@@ -39,7 +48,7 @@ def load_params():
     return params
 
 
-def run_session(params):
+def run_session(params, online, classifier):
     trial_stims = Marker.all() * params["trials_per_stim"]
     np.random.shuffle(trial_stims)
     # start recording
@@ -63,6 +72,20 @@ def run_session(params):
         board.insert_marker(stim)
         sleep(params["trial_duration"])
         win.flip()
+        if online:
+            num_available_data = board.get_board_data_count()
+            raw_board = board.get_current_board_data(num_available_data)
+            raw_mne = convert_to_mne(raw_board)
+            # raw_mne = preprocess(raw_mne)
+            events = mne.find_events(raw_mne)
+            epochs = mne.Epochs(raw_mne, events, stim, tmin=0, tmax=params["trial_duration"], picks="data", baseline=(0, 0))
+            current_epoch = epochs[-1]
+            features = get_features(current_epoch.get_data())
+            prediction = classifier.predict(features)
+            show_classification_result(win, stim, prediction)
+            win.update()
+            sleep(3)
+            win.flip()
         counter = counter + 1
     sleep(params["get_ready_duration"])
     # stop recording
@@ -73,10 +96,20 @@ def run_session(params):
 
 
 def show_stim_progress(win, counter, total, stim):
-    txt = visual.TextStim(win=win, text=f'trial {counter}/{total}\n get ready for {Marker(stim).name}', color=(0, 0, 0),
-                          bold=True, pos=(0, 0.8))
-    txt.font = 'arial'
-    txt.draw()
+    visual.TextStim(win=win, text=f'trial {counter}/{total}\n get ready for {Marker(stim).name}', color=(0, 0, 0),
+                    bold=True, pos=(0, 0.8), font='arial').draw()
+
+
+def show_classification_result(win, stim, prediction):
+    if stim == prediction:
+        msg = 'correct prediction'
+        col = (0, 1, 0)
+    else:
+        msg = 'incorrect prediction'
+        col = (1, 0, 0)
+    visual.TextStim(win=win, text=f'label: {Marker(stim).name}\nprediction: {Marker(prediction).name}\n{msg}',
+                    color=col,
+                    bold=True, pos=(0, 0.8), font='arial').draw()
 
 
 def show_stimulus(win, stim):
@@ -85,7 +118,7 @@ def show_stimulus(win, stim):
 
 def create_board():
     params = BrainFlowInputParams()
-    params.serial_port = find_serial_port()
+    # params.serial_port = find_serial_port()
     board = BoardShim(BOARD_ID, params)
     board.prepare_session()
     return board
@@ -111,6 +144,13 @@ def find_serial_port():
     if len(FTDIlist) < 1:
         raise LookupError("FTDI-manufactured device not found. Please check the dongle is connected")
     return FTDIlist[0].name
+
+
+def get_classifier(classifier_filename):
+    pickle_read = open(classifier_filename, "rb")
+    classifier = pickle.load(pickle_read)
+    pickle_read.close()
+    return classifier
 
 
 if __name__ == "__main__":

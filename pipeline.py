@@ -8,14 +8,22 @@ from features import get_features
 from classifier import create_classifier
 import numpy as np
 import scipy.io
+import pickle
 
 
 def main():
-    raw, params = load_recordings("David2")
+    name = 'Haggai'
+    raw, params = load_recordings(name)
     raw = preprocess(raw)
     epochs, labels = get_epochs(raw, params["trial_duration"])
     features = get_features(epochs.get_data())
     clf, acc = create_classifier(features, labels)
+    classifier_num = 1
+    str_classifier = "classifier_{}_{}.pickle".format(name, classifier_num)
+    classifier_filename = os.path.join(CLASSIFIERS_DIR, str_classifier)
+    pickle_write = open(classifier_filename, "wb")
+    pickle.dump(clf, pickle_write)
+    pickle_write.close()
     print(f'k-fold validation accuracy: {np.mean(acc)}')
 
 
