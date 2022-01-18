@@ -8,6 +8,7 @@ from features import get_features
 from classifier import create_classifier
 import numpy as np
 import scipy.io
+import pickle
 
 
 def main():
@@ -52,6 +53,14 @@ def matlab_data_pipeline():
     features = get_features(epochs.get_data())
     clf, acc = create_classifier(features, labels)
     print(f'k-fold validation accuracy: {np.mean(acc)}')
+
+
+def save_classifier(name, classifier_num, clf):
+    str_classifier = "classifier_{}_{}.pickle".format(name, classifier_num)
+    classifier_filename = os.path.join(CLASSIFIERS_DIR, str_classifier)
+    pickle_write = open(classifier_filename, "wb")
+    pickle.dump(clf, pickle_write)
+    pickle_write.close()
 
 
 if __name__ == "__main__":
