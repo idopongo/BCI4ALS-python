@@ -12,6 +12,7 @@ from sklearn.pipeline import Pipeline
 import numpy as np
 from constants import *
 from sklearn.model_selection import GridSearchCV
+import pickle
 
 
 def main():
@@ -118,6 +119,14 @@ def matlab_data_pipeline():
     features = get_features(epochs.get_data())
     clf, acc = create_classifier(features, labels)
     print(f'k-fold validation accuracy: {np.mean(acc)}')
+
+
+def save_pipeline(name, classifier_num, clf):
+    str_classifier = "classifier_{}_{}.pickle".format(name, classifier_num)
+    classifier_filename = os.path.join(PIPELINES_DIR, str_classifier)
+    pickle_write = open(classifier_filename, "wb")
+    pickle.dump(clf, pickle_write)
+    pickle_write.close()
 
 
 if __name__ == "__main__":

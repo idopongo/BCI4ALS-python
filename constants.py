@@ -1,11 +1,5 @@
 from brainflow import BoardIds, BoardShim
 
-# Preprocessing
-NOTCH_FREQ = 50
-NOTCH_WIDTH = 3
-LOW_PASS = 4
-HIGH_PASS = 30
-
 # Paths
 IMAGES_DIR = "./images"
 RECORDINGS_DIR = "./recordings"
