@@ -18,7 +18,8 @@ def main():
     save_raw(raw, params)
 
 
-def save_raw(raw, params):
+def save_raw():
+    raw = self.raw
     folder_path = create_session_folder(params["subject"])
     raw.save(os.path.join(folder_path, "raw.fif"))
     with open(os.path.join(folder_path, "params.json"), 'w', encoding='utf-8') as f:
@@ -39,7 +40,8 @@ def load_params():
     return params
 
 
-def run_session(params):
+def run_session(self):
+    params = self.params
     trial_stims = Marker.all() * params["trials_per_stim"]
     np.random.shuffle(trial_stims)
     # start recording
@@ -69,6 +71,7 @@ def run_session(params):
     raw = convert_to_mne(board.get_board_data())
     board.stop_stream()
     board.release_session()
+    self.raw = raw
     return raw
 
 

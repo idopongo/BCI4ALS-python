@@ -1,11 +1,11 @@
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.model_selection import cross_val_score
-from sklearn.pipeline import Pipeline
+from sklearn.model_selection import RepeatedStratifiedKFold, cross_val_score, StratifiedKFold
+from sklearn.pipeline import make_pipeline
 
 
 def create_classifier(features, labels):
+    skf = RepeatedStratifiedKFold(n_splits=3, n_repeats=20)
     lda = LinearDiscriminantAnalysis()
-    clf = Pipeline([('LDA', lda)])
-    scores = cross_val_score(clf, features, labels, cv=5)
-    lda.fit(features, labels)
-    return lda, scores
+    clf = make_pipeline(lda)
+    scores = cross_val_score(clf, features, labels, cv=skf)
+    return clf, scores
