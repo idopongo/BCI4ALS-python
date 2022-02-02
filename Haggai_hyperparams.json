@@ -1,0 +1,13 @@
+{
+    "features__n_fft": 200,
+    "features__n_per_seg": 62,
+    "features__n_overlap": 0.3,
+    "features__freq_bands": [
+        8,
+        12,
+        30
+    ],
+    "preprocessor__trim_epoch": 0,
+    "preprocessor__l_freq": 5,
+    "preprocessor__h_freq": 30
+}

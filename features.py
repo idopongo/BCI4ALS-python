@@ -1,21 +1,37 @@
 import numpy as np
 from constants import *
-from mne_features.univariate import compute_pow_freq_bands, compute_hjorth_complexity_spect, compute_hjorth_complexity, \
-    compute_katz_fd, compute_spect_entropy, compute_rms, compute_hjorth_mobility_spect, compute_higuchi_fd, \
-    compute_wavelet_coef_energy
+from mne_features.univariate import compute_pow_freq_bands
 
-FREQ_BANDS = [8, 12, 30]
+FREQ_BANDS = [8, 10, 12, 20, 30]
 
 
-def get_features(data):
-    band_power = np.array([compute_pow_freq_bands(FS, epoch, FREQ_BANDS, ratios="all") for epoch in data])
-    f1 = np.array([compute_hjorth_complexity_spect(FS, epoch) for epoch in data])
-    f2 = np.array([compute_katz_fd(epoch) for epoch in data])
-    f3 = np.array([compute_spect_entropy(FS, epoch) for epoch in data])
-    f4 = np.array([compute_rms(epoch) for epoch in data])
-    f5 = np.array([compute_hjorth_mobility_spect(FS, epoch) for epoch in data])
-    f6 = np.array([compute_higuchi_fd(epoch) for epoch in data])
-    f7 = np.array([compute_wavelet_coef_energy(epoch) for epoch in data])
+def get_features(data, psd_params):
+    band_power = np.array([compute_pow_freq_bands(FS, epoch, FREQ_BANDS, psd_params=psd_params) for epoch in data])
+    return band_power
 
-    features = np.hstack((band_power, f1, f2, f3, f4, f5, f6, f7))
-    return features
+
+class FeatureExtractor:
+    def __init__(self):
+        self.n_overlap = 250
+        self.n_fft = 62
+        self.n_per_seg = 18
+        self.freq_bands = [8, 10, 12, 20, 30]
+
+    def set_params(self, n_fft, n_per_seg, n_overlap, freq_bands):
+        self.n_fft = n_fft
+        self.n_per_seg = n_per_seg
+        self.n_overlap = n_overlap
+        self.freq_bands = freq_bands
+
+    def fit(self, data, labels):
+        return self
+
+    def transform(self, data):
+        psd_params = {
+            "welch_n_fft": self.n_fft,
+            "welch_n_per_seg": self.n_per_seg,
+            "welch_n_overlap": self.n_overlap,
+        }
+        band_power = np.array(
+            [compute_pow_freq_bands(FS, epoch, self.freq_bands, psd_params=psd_params) for epoch in data])
+        return band_power

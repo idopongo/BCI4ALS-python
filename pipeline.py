@@ -1,24 +1,83 @@
 import mne
 from Marker import Marker
-from constants import *
 import os
 import json
-from preprocessing import preprocess
-from features import get_features
-from classifier import create_classifier, csp_test
-import numpy as np
+from preprocessing import Preprocessor
+from features import get_features, FeatureExtractor
+from classifier import create_classifier
 import scipy.io
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.model_selection import RepeatedStratifiedKFold, cross_val_score
+from sklearn.pipeline import Pipeline
+import numpy as np
+from constants import *
+from sklearn.model_selection import GridSearchCV
 
 
 def main():
-    raw, params = load_recordings("Ido")
-    raw = preprocess(raw)
+    raw, params = load_recordings("Haggai")
     epochs, labels = get_epochs(raw, params["trial_duration"])
-    epochs.load_data()
-    epochs.crop(tmin=1)
-    features = get_features(epochs.get_data())
-    clf, acc = create_classifier(features, labels)
-    print(f'k-fold validation accuracy: {np.mean(acc)}')
+    best_hyperparams_haggai = {
+        "features__n_fft": 200,
+        "features__n_per_seg": 62,
+        "features__n_overlap": 0.3,
+        "features__freq_bands": [8, 12, 30],
+        "preprocessor__trim_epoch": 0,
+        "preprocessor__l_freq": 5,
+        "preprocessor__h_freq": 30,
+    }
+    best_hyperparams_ido = {
+        "features__n_fft": 250,
+        "features__n_per_seg": 62,
+        "features__n_overlap": 0.2,
+        "features__freq_bands": [8, 12, 20],
+        "preprocessor__trim_epoch": 1,
+        "preprocessor__l_freq": 2,
+        "preprocessor__h_freq": 24,
+    }
+    save_hyperparams(best_hyperparams_ido, "Ido")
+    pipeline = create_pipeline(best_hyperparams_haggai)
+    skf = RepeatedStratifiedKFold(n_splits=2, n_repeats=10)
+    scores = cross_val_score(pipeline, epochs.get_data(), labels, cv=skf)
+    print(
+        f'features classifier accuracy: \n mean: {np.round(np.mean(scores), 2)} \n std: {np.round(np.std(scores), 3)}')
+    # grid_search_pipeline(epochs, labels)
+
+
+def create_pipeline(hyperparams):
+    lda = LinearDiscriminantAnalysis()
+    pipeline = Pipeline([('preprocessor', Preprocessor()), ('features', FeatureExtractor()), ('lda', lda)])
+    for name, step in pipeline.named_steps.items():
+        step_params = [v for k, v in hyperparams.items() if k.startswith(name)]
+        step.set_params(*step_params)
+    return pipeline
+
+
+def save_hyperparams(hyperparams, name):
+    filename = f'{name}_hyperparams.json'
+    with open(filename, 'w', encoding='utf-8') as f:
+        json.dump(hyperparams, f, ensure_ascii=False, indent=4)
+
+
+def grid_search_pipeline(epochs, labels):
+    lda = LinearDiscriminantAnalysis()
+
+    pipeline = Pipeline([('preprocessor', Preprocessor()), ('features', FeatureExtractor()), ('lda', lda)])
+    gridsearch_params = {
+        "features__n_fft": [150, 200, 250],
+        "features__n_per_seg": [31, 62, 125],
+        "features__n_overlap": [0.2, 0.3, 0.4],
+        "features__freq_bands": [[8, 12, 30], [8, 12, 20, 30]],
+        "preprocessor__trim_epoch": [0, 1],
+        "preprocessor__l_freq": [2, 5, 8],
+        "preprocessor__h_freq": [24, 30],
+    }
+    skf = RepeatedStratifiedKFold(n_splits=3, n_repeats=5)
+
+    gs = GridSearchCV(pipeline, gridsearch_params, cv=skf)
+    gs.fit(epochs.get_data(), labels)
+    print("Best parameter (CV score=%0.3f):" % gs.best_score_)
+    print(gs.best_params_)
 
 
 def get_epochs(raw, trial_duration):

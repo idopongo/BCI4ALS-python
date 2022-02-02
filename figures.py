@@ -38,7 +38,6 @@ def create_raw_fig(raw):
     events = mne.find_events(raw)
     event_dict = {marker.name: marker.value for marker in Marker}
     fig = mne.viz.plot_raw(raw, events=events, clipping=None, show=False, event_id=event_dict)
-    plt.show()
     return fig
 
 
@@ -64,23 +63,25 @@ def calc_class_spectrogram(raw, rec_params, cls_marker, chan, time_before_stim):
                         picks="data")
     cls_epochs = epochs[str(cls_marker.value)].load_data().pick([chan])
 
-    segments_per_second = 5
+    segments_per_second = 2
     nperseg = int(FS / segments_per_second)
+    noverlap = nperseg * 0.3
     nfft = 256
     freq_range = (2, 40)
 
-    _, _, total_pow = signal.spectrogram(cls_epochs.next().squeeze(), FS, nperseg=nperseg, scaling="spectrum",
-                                         nfft=nfft)
+    _, _, total_pow = signal.spectrogram(cls_epochs.next().squeeze(), FS, nperseg=nperseg, scaling="density",
+                                         nfft=nfft, noverlap=noverlap)
     for epoch in cls_epochs[1:]:
         data = epoch.squeeze()
-        freq, time, power = signal.spectrogram(data, FS, nperseg=nperseg, nfft=nfft, scaling="spectrum")
+        freq, time, power = signal.spectrogram(data, FS, nperseg=nperseg, nfft=nfft, scaling="density",
+                                               noverlap=noverlap)
         total_pow = total_pow + power
 
     avg_power = total_pow / len(cls_epochs)
     freq_idxs = (freq >= freq_range[0]) & (freq <= freq_range[1])
     freq = freq[freq_idxs]
     avg_power = avg_power[freq_idxs]
-    return avg_power, freq, time
+    return 10 * np.log10(avg_power), freq, time
 
 
 def create_class_spectrogram_fig(raw, rec_params, electrodes):
