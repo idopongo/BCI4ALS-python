@@ -3,7 +3,7 @@ from Marker import Marker
 import os
 import json
 from preprocessing import Preprocessor
-from features import get_features, FeatureExtractor
+from features import FeatureExtractor
 from classifier import create_classifier
 import scipy.io
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
@@ -19,6 +19,7 @@ def main():
     raw, params = load_recordings("Haggai")
     epochs, labels = get_epochs(raw, params["trial_duration"])
     best_hyperparams_haggai = {
+        "features__sfreq": raw.info['sfreq'],
         "features__n_fft": 200,
         "features__n_per_seg": 62,
         "features__n_overlap": 0.3,
@@ -27,30 +28,19 @@ def main():
         "preprocessor__l_freq": 5,
         "preprocessor__h_freq": 30,
     }
-    best_hyperparams_ido = {
-        "features__n_fft": 250,
-        "features__n_per_seg": 62,
-        "features__n_overlap": 0.2,
-        "features__freq_bands": [8, 12, 20],
-        "preprocessor__trim_epoch": 1,
-        "preprocessor__l_freq": 2,
-        "preprocessor__h_freq": 24,
-    }
-    save_hyperparams(best_hyperparams_ido, "Ido")
     pipeline = create_pipeline(best_hyperparams_haggai)
+    pipeline.fit(epochs, labels)
+    save_pipeline(pipeline, "Haggai")
     skf = RepeatedStratifiedKFold(n_splits=2, n_repeats=10)
     scores = cross_val_score(pipeline, epochs.get_data(), labels, cv=skf)
     print(
         f'features classifier accuracy: \n mean: {np.round(np.mean(scores), 2)} \n std: {np.round(np.std(scores), 3)}')
-    # grid_search_pipeline(epochs, labels)
 
 
 def create_pipeline(hyperparams):
     lda = LinearDiscriminantAnalysis()
     pipeline = Pipeline([('preprocessor', Preprocessor()), ('features', FeatureExtractor()), ('lda', lda)])
-    for name, step in pipeline.named_steps.items():
-        step_params = [v for k, v in hyperparams.items() if k.startswith(name)]
-        step.set_params(*step_params)
+    pipeline.set_params(**hyperparams)
     return pipeline
 
 
@@ -81,9 +71,9 @@ def grid_search_pipeline(epochs, labels):
     print(gs.best_params_)
 
 
-def get_epochs(raw, trial_duration):
+def get_epochs(raw, trial_duration, markers=Marker.all()):
     events = mne.find_events(raw)
-    epochs = mne.Epochs(raw, events, Marker.all(), tmin=-1, tmax=trial_duration, picks="data", baseline=(-1, 0))
+    epochs = mne.Epochs(raw, events, markers, tmin=-1, tmax=trial_duration, picks="data", baseline=(-1, 0))
     labels = epochs.events[:, -1]
     return epochs, labels
 
@@ -121,12 +111,17 @@ def matlab_data_pipeline():
     print(f'k-fold validation accuracy: {np.mean(acc)}')
 
 
-def save_pipeline(name, classifier_num, clf):
-    str_classifier = "classifier_{}_{}.pickle".format(name, classifier_num)
-    classifier_filename = os.path.join(PIPELINES_DIR, str_classifier)
-    pickle_write = open(classifier_filename, "wb")
-    pickle.dump(clf, pickle_write)
-    pickle_write.close()
+def save_pipeline(pipeline, name):
+    save_path = os.path.join(PIPELINES_DIR, f'pipeline_{name}.pickle')
+    with open(save_path, "wb") as file:
+        pickle.dump(pipeline, file)
+
+
+def load_pipeline(name):
+    load_path = os.path.join(PIPELINES_DIR, f'pipeline_{name}.pickle')
+    with open(load_path, "rb") as file:
+        pipeline = pickle.load(file)
+    return pipeline
 
 
 if __name__ == "__main__":

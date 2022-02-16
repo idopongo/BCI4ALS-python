@@ -1,7 +1,5 @@
 import mne
 
-from constants import FS
-
 
 class Preprocessor:
     def __init__(self):
@@ -18,8 +16,10 @@ class Preprocessor:
         return self
 
     def transform(self, epochs):
-        epochs = mne.filter.filter_data(epochs, FS, self.l_freq, self.h_freq)
-        epochs = epochs[:, :, FS * self.trim_epoch:]
+        sfreq = epochs.info['sfreq']
+        epochs = epochs.get_data()
+        epochs = mne.filter.filter_data(epochs, sfreq, self.l_freq, self.h_freq)
+        epochs = epochs[:, :, int(sfreq * self.trim_epoch):]
         return epochs
 
 

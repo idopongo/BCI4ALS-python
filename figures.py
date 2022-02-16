@@ -69,8 +69,8 @@ def calc_class_spectrogram(raw, rec_params, cls_marker, chan, time_before_stim):
     nfft = 256
     freq_range = (2, 40)
 
-    _, _, total_pow = signal.spectrogram(cls_epochs.next().squeeze(), FS, nperseg=nperseg, scaling="density",
-                                         nfft=nfft, noverlap=noverlap)
+    freq, time, total_pow = signal.spectrogram(cls_epochs.next().squeeze(), FS, nperseg=nperseg, scaling="density",
+                                               nfft=nfft, noverlap=noverlap)
     for epoch in cls_epochs[1:]:
         data = epoch.squeeze()
         freq, time, power = signal.spectrogram(data, FS, nperseg=nperseg, nfft=nfft, scaling="density",
@@ -109,4 +109,4 @@ def save_plots_for_subject(subject_name):
 
 
 if __name__ == "__main__":
-    save_plots_for_subject("Haggai")
+    save_plots_for_subject("Syn")
