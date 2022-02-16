@@ -30,7 +30,7 @@ def save_plots(rec_folder_name, bad_electrodes=[]):
 
 
 def create_psd_fig(raw):
-    fig = mne.viz.plot_raw_psd(raw, fmin=LOW_PASS, fmax=HIGH_PASS, show=False)
+    fig = mne.viz.plot_raw_psd(raw, fmin=7, fmax=30, show=False)
     return fig
 
 

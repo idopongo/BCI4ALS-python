@@ -1,6 +1,6 @@
 import mne
 
-from constants import NOTCH_FREQ, NOTCH_WIDTH, LOW_PASS, HIGH_PASS, FS
+from constants import FS
 
 
 class Preprocessor:
@@ -44,6 +44,4 @@ def laplacian(raw):
 def preprocess(raw):
     raw.load_data()
     raw = mne.preprocessing.compute_current_source_density(raw)
-    raw.notch_filter(NOTCH_FREQ)
-    raw.filter(LOW_PASS, HIGH_PASS)
     return raw
