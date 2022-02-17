@@ -14,7 +14,6 @@ from pipeline import get_subject_rec_folders
 def save_plots(rec_folder_name, bad_electrodes=[]):
     raw, rec_params = load_raw(rec_folder_name)
     raw = preprocess(raw)
-
     raw.info['bads'] = bad_electrodes
 
     fig_path = create_figures_folder(rec_folder_name)
@@ -28,6 +27,9 @@ def save_plots(rec_folder_name, bad_electrodes=[]):
     electrodes = ["C3", "C4", "Cz"]
     class_spectrogram_fig = create_class_spectrogram_fig(raw, rec_params, electrodes)
     class_spectrogram_fig.savefig(os.path.join(fig_path, f'class_spectrogram_{"_".join(electrodes)}.png'))
+
+    class_psd_fig = create_class_psd_fig(raw, electrodes, rec_params)
+    class_psd_fig.savefig(os.path.join(fig_path, f'class_psd_{"_".join(electrodes)}.png'))
 
 
 def create_psd_fig(raw):
@@ -71,19 +73,63 @@ def calc_class_spectrogram(raw, rec_params, cls_marker, chan, time_before_stim):
     nfft = 256
     freq_range = (2, 40)
 
-    freq, time, total_pow = signal.spectrogram(cls_epochs.next().squeeze(), sfreq, nperseg=nperseg, scaling="density",
-                                               nfft=nfft, noverlap=noverlap)
+    # we calculate the power for the first epoch separately so that we have a variable of the right dimensions to sum onto
+    first_epoch = cls_epochs.next().squeeze()
+    _, _, total_pow = signal.spectrogram(first_epoch, sfreq, nperseg=nperseg, scaling="density",
+                                         nfft=nfft, noverlap=noverlap)
     for epoch in cls_epochs[1:]:
         data = epoch.squeeze()
         freq, time, power = signal.spectrogram(data, sfreq, nperseg=nperseg, nfft=nfft, scaling="density",
                                                noverlap=noverlap)
-        total_pow = total_pow + power
+        total_pow += power
 
     avg_power = total_pow / len(cls_epochs)
     freq_idxs = (freq >= freq_range[0]) & (freq <= freq_range[1])
     freq = freq[freq_idxs]
     avg_power = avg_power[freq_idxs]
-    return 10 * np.log10(avg_power), freq, time
+    return avg_power, freq, time
+
+
+def calc_class_psd(raw, rec_params, cls_marker, chan):
+    events = mne.find_events(raw)
+    epochs = mne.Epochs(raw, events, Marker.all(), tmax=rec_params["trial_duration"],
+                        picks="data", )
+    cls_epochs = epochs[str(cls_marker.value)].load_data().pick([chan])
+
+    sfreq = raw.info['sfreq']
+
+    # calculate the first fft
+    first_epoch = cls_epochs.next().squeeze()
+    _, total_pxx = signal.welch(first_epoch, sfreq, scaling="density")
+
+    for epoch in cls_epochs[1:]:
+        data = epoch.squeeze()
+        freq, pxx = signal.welch(data, sfreq, scaling="density")
+
+        total_pxx += pxx
+
+    avg_pxx = total_pxx / len(cls_epochs)
+    
+    freq_range = (7, 30)
+    freq_idxs = (freq >= freq_range[0]) & (freq <= freq_range[1])
+    freq = freq[freq_idxs]
+    avg_pxx = avg_pxx[freq_idxs]
+    return avg_pxx, freq
+
+
+def create_class_psd_fig(raw, electrodes, rec_params):
+    chans = [raw.info.ch_names.index(elec) for elec in electrodes]
+    fig, axs = plt.subplots(len(chans), len(Marker.all()), figsize=(22, 11))
+    for i, chan in enumerate(chans):
+        for j, cls in enumerate(Marker):
+            power, freq = calc_class_psd(raw, rec_params, cls, chan)
+            ax = axs[i, j]
+            ax.semilogy(freq, 10 * power)
+            ax.set_ylabel('Power')
+            ax.set_xlabel('Frequency [Hz]')
+            ax.set_title(f'{cls.name} {raw.info.ch_names[chan]}')
+    fig.tight_layout()
+    return fig
 
 
 def create_class_spectrogram_fig(raw, rec_params, electrodes):
@@ -94,7 +140,7 @@ def create_class_spectrogram_fig(raw, rec_params, electrodes):
         for j, cls in enumerate(Marker):
             power, freq, time = calc_class_spectrogram(raw, rec_params, cls, chan, time_before_stim)
             ax = axs[i, j]
-            mesh = ax.pcolormesh(time, freq, power, shading='auto', cmap="jet", )
+            mesh = ax.pcolormesh(time, freq, 10 * np.log10(power), shading='auto', cmap="jet", )
             plt.colorbar(mesh, ax=ax)
             ax.set_xlabel('Time [sec]')
             ax.set_ylabel('Frequency [Hz]')
@@ -111,4 +157,4 @@ def save_plots_for_subject(subject_name):
 
 
 if __name__ == "__main__":
-    save_plots_for_subject("David3")
+    save_plots_for_subject("Haggai")
