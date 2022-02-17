@@ -16,31 +16,38 @@ import pickle
 
 
 def main():
-    raw, params = load_recordings("David3")
+    subject = "David3"
+    raw, params = load_recordings(subject)
     epochs, labels = get_epochs(raw, params["trial_duration"])
-    best_hyperparams_haggai = {
-        "features__sfreq": raw.info['sfreq'],
-        "features__n_fft": 200,
-        "features__n_per_seg": 62,
-        "features__n_overlap": 0.3,
-        "features__freq_bands": [8, 12, 30],
-        "preprocessor__trim_epoch": 0,
-        "preprocessor__l_freq": 5,
-        "preprocessor__h_freq": 30,
-    }
-    pipeline = create_pipeline(best_hyperparams_haggai)
+    epochs = epochs.get_data()
+    best_params = grid_search_pipeline_hyperparams(epochs, labels)
+    save_hyperparams(best_params, subject)
+    pipeline = create_pipeline(best_params)
     pipeline.fit(epochs, labels)
-    save_pipeline(pipeline, "Haggai")
-    skf = RepeatedStratifiedKFold(n_splits=2, n_repeats=10)
-    scores = cross_val_score(pipeline, epochs.get_data(), labels, cv=skf)
+    save_pipeline(pipeline, subject)
+    skf = RepeatedStratifiedKFold(n_splits=4, n_repeats=10)
+    scores = cross_val_score(pipeline, epochs, labels, cv=skf)
     print(
         f'features classifier accuracy: \n mean: {np.round(np.mean(scores), 2)} \n std: {np.round(np.std(scores), 3)}')
 
 
-def create_pipeline(hyperparams):
+def create_pipeline(hyperparams={}):
     lda = LinearDiscriminantAnalysis()
-    pipeline = Pipeline([('preprocessor', Preprocessor()), ('features', FeatureExtractor()), ('lda', lda)])
+    pipeline = Pipeline([('preprocessing', Preprocessor()), ('feature_extraction', FeatureExtractor()), ('lda', lda)])
     pipeline.set_params(**hyperparams)
+    return pipeline
+
+
+def save_pipeline(pipeline, name):
+    save_path = os.path.join(PIPELINES_DIR, f'pipeline_{name}.pickle')
+    with open(save_path, "wb") as file:
+        pickle.dump(pipeline, file)
+
+
+def load_pipeline(name):
+    load_path = os.path.join(PIPELINES_DIR, f'pipeline_{name}.pickle')
+    with open(load_path, "rb") as file:
+        pipeline = pickle.load(file)
     return pipeline
 
 
@@ -50,25 +57,24 @@ def save_hyperparams(hyperparams, name):
         json.dump(hyperparams, f, ensure_ascii=False, indent=4)
 
 
-def grid_search_pipeline(epochs, labels):
-    lda = LinearDiscriminantAnalysis()
-
-    pipeline = Pipeline([('preprocessor', Preprocessor()), ('features', FeatureExtractor()), ('lda', lda)])
+def grid_search_pipeline_hyperparams(epochs, labels):
+    pipeline = create_pipeline()
     gridsearch_params = {
-        "features__n_fft": [150, 200, 250],
-        "features__n_per_seg": [31, 62, 125],
-        "features__n_overlap": [0.2, 0.3, 0.4],
-        "features__freq_bands": [[8, 12, 30], [8, 12, 20, 30]],
-        "preprocessor__trim_epoch": [0, 1],
-        "preprocessor__l_freq": [2, 5, 8],
-        "preprocessor__h_freq": [24, 30],
+        "preprocessing__epoch_tmin": [0, 1],
+        "preprocessing__l_freq": [2, 5, 8],
+        "preprocessing__h_freq": [24, 30],
+        "feature_extraction__n_fft": [150, 200, 250],
+        "feature_extraction__n_per_seg": [31, 62, 125],
+        "feature_extraction__n_overlap": [0.2, 0.3, 0.4],
+        "feature_extraction__freq_bands": [[8, 12, 30], [8, 12, 20, 30]],
     }
     skf = RepeatedStratifiedKFold(n_splits=3, n_repeats=5)
 
-    gs = GridSearchCV(pipeline, gridsearch_params, cv=skf)
-    gs.fit(epochs.get_data(), labels)
+    gs = GridSearchCV(pipeline, gridsearch_params, cv=skf, n_jobs=-1)
+    gs.fit(epochs, labels)
     print("Best parameter (CV score=%0.3f):" % gs.best_score_)
     print(gs.best_params_)
+    return gs.best_params_
 
 
 def get_epochs(raw, trial_duration, markers=Marker.all()):
@@ -109,19 +115,6 @@ def matlab_data_pipeline():
     features = get_features(epochs.get_data())
     clf, acc = create_classifier(features, labels)
     print(f'k-fold validation accuracy: {np.mean(acc)}')
-
-
-def save_pipeline(pipeline, name):
-    save_path = os.path.join(PIPELINES_DIR, f'pipeline_{name}.pickle')
-    with open(save_path, "wb") as file:
-        pickle.dump(pipeline, file)
-
-
-def load_pipeline(name):
-    load_path = os.path.join(PIPELINES_DIR, f'pipeline_{name}.pickle')
-    with open(load_path, "rb") as file:
-        pipeline = pickle.load(file)
-    return pipeline
 
 
 if __name__ == "__main__":

@@ -9,11 +9,14 @@ from board import Board
 import json
 from pipeline import load_pipeline, get_epochs
 
+BG_COLOR = "black"
+STIM_COLOR = "white"
+
 
 def main():
     params = load_params()
-    pipeline = load_pipeline('Haggai')
-    raw = run_session(params)
+    pipeline = load_pipeline('David3')
+    raw = run_session(params, pipeline)
     save_raw(raw, params)
 
 
@@ -47,11 +50,9 @@ def run_session(params, pipeline=None):
     np.random.shuffle(trial_markers)
 
     # open psychopy window and display starting message
-    win = visual.Window(units="norm", color=(1, 1, 1), fullscr=params["full_screen"])
-    start_msg = "Hit any key to start \n press Esc at any point to exit"
-    visual.TextStim(win=win, pos=(0, 0.5), text=start_msg, color=(0, 0, 0)).draw()
-    win.flip()
-    event.waitKeys()
+    win = visual.Window(units="norm", color=BG_COLOR, fullscr=params["full_screen"])
+    msg1 = "Hit any key to start, press Esc at any point to exit"
+    loop_through_messages(win, [msg1])
 
     # start recording
     with Board(use_synthetic=params["use_synthetic_board"]) as board:
@@ -60,30 +61,49 @@ def run_session(params, pipeline=None):
                                    params["get_ready_duration"])
             core.wait(params["calibration_duration"])
             board.insert_marker(marker)
-            show_stim_for_duration(win, marker_image(win, marker), params["trial_duration"])
+            show_stim_for_duration(win, marker_stim(win, marker), params["trial_duration"])
 
             if pipeline:
                 # get epoch and display prediction
                 epochs, _ = get_epochs(board.get_data(), params["trial_duration"], markers=marker)
-                prediction = pipeline.predict(epochs)[-1]
+                print(epochs.get_data())
+                prediction = pipeline.predict(epochs.get_data())[-1]
                 txt = classification_result_txt(win, marker, prediction)
                 show_stim_for_duration(win, txt, params["display_online_result_duration"])
         win.close()
         return board.get_data()
 
 
+def loop_through_messages(win, messages):
+    for msg in messages:
+        visual.TextStim(win=win, text=msg, color=STIM_COLOR).draw()
+        win.flip()
+        keys_pressed = event.waitKeys()
+        if 'escape' in keys_pressed:
+            core.quit()
+        if 'backspace' in keys_pressed:
+            break
+
+
+def marker_stim(win, marker):
+    shape = visual.ShapeStim(win, vertices=Marker(marker).shape, fillColor=STIM_COLOR, size=.5)
+    return shape
+
+
 def show_stim_for_duration(win, stim, duration):
+    # Adding this code here is an easy way to make sure we check for an escape event before showing any stimulus
     if 'escape' in event.getKeys():
         core.quit()
-    stim.draw()
-    win.flip()
+
+    stim.draw()  # draw stim on back buffer
+    win.flip()  # flip the front and back buffers and then clear the back buffer
     core.wait(duration)
-    win.flip()
+    win.flip()  # flip back to the (now empty) back buffer
 
 
 def progress_text(win, done, total, stim):
-    txt = visual.TextStim(win=win, text=f'trial {done}/{total}\n get ready for {Marker(stim).name}', color=(0, 0, 0),
-                          bold=True, pos=(0, 0.8))
+    txt = visual.TextStim(win=win, text=f'trial {done}/{total}\n get ready for {Marker(stim).name}', color=STIM_COLOR,
+                          bold=True, alignHoriz='center', alignVert='center')
     txt.font = 'arial'
     return txt
 
@@ -97,7 +117,7 @@ def classification_result_txt(win, marker, prediction):
         col = (1, 0, 0)
     return visual.TextStim(win=win, text=f'label: {Marker(marker).name}\nprediction: {Marker(prediction).name}\n{msg}',
                            color=col,
-                           bold=True, pos=(0, 0.8), font='arial')
+                           bold=True, alignHoriz='center', alignVert='center', font='arial', )
 
 
 def marker_image(win, marker):

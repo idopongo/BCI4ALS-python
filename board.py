@@ -1,3 +1,4 @@
+import brainflow.board_shim
 from brainflow import BrainFlowInputParams
 from serial.tools import list_ports
 from brainflow import BoardIds, BoardShim
@@ -22,6 +23,27 @@ class Board:
 
         self.brainflow_board = board
 
+    @property
+    def eeg_channels(self):
+        if self.board_id == BoardIds.CYTON_DAISY_BOARD:
+            # last 3 electrodes are turned off
+            return self.brainflow_board.get_eeg_channels(self.board_id)[:-3]
+        return self.brainflow_board.get_eeg_channels(self.board_id)
+
+    @property
+    def sfreq(self):
+        return self.brainflow_board.get_sampling_rate(self.board_id)
+
+    @property
+    def marker_channel(self):
+        return self.brainflow_board.get_marker_channel(self.board_id)
+
+    @property
+    def channel_names(self):
+        if self.board_id == BoardIds.CYTON_DAISY_BOARD:
+            return EEG_CHAN_NAMES
+        return self.brainflow_board.get_eeg_names(self.board_id)
+
     def __enter__(self):
         self.brainflow_board.prepare_session()
         self.brainflow_board.config_board(HARDWARE_SETTINGS_MSG)
@@ -29,6 +51,7 @@ class Board:
         return self
 
     def __exit__(self, *args):
+        self.brainflow_board.log_message(brainflow.board_shim.LogLevels.LEVEL_INFO, "SAFE EXIT")
         self.brainflow_board.stop_stream()
         self.brainflow_board.release_session()
 
@@ -37,14 +60,12 @@ class Board:
 
     def get_data(self):
         recording = self.brainflow_board.get_board_data()
-        eeg_channels = BoardShim.get_eeg_channels(self.board_id)[:-3]  # last 3 electrodes are turned off
-        marker_channel = BoardShim.get_marker_channel(self.board_id)
-        recording[eeg_channels] = recording[eeg_channels] / 1e6  # BrainFlow returns uV, convert to V for MNE
-        data = recording[eeg_channels + [marker_channel]]
+        eeg_channels = self.eeg_channels
+        recording[self.eeg_channels] = recording[self.eeg_channels] / 1e6  # BrainFlow returns uV, convert to V for MNE
+        data = recording[eeg_channels + [self.marker_channel]]
         ch_types = (['eeg'] * len(eeg_channels)) + ['stim']
         ch_names = EEG_CHAN_NAMES + [EVENT_CHAN_NAME]
-        sfreq = BoardShim.get_sampling_rate(self.board_id)
-        info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types=ch_types)
+        info = mne.create_info(ch_names=ch_names, sfreq=self.sfreq, ch_types=ch_types)
         raw = mne.io.RawArray(data, info)
         raw.set_montage("standard_1020")
         return raw

@@ -3,12 +3,12 @@ import mne
 
 class Preprocessor:
     def __init__(self):
-        self.trim_epoch = 1
+        self.epoch_tmin = 1
         self.l_freq = 7
         self.h_freq = 30
 
-    def set_params(self, trim_epoch, l_freq, h_freq):
-        self.trim_epoch = trim_epoch
+    def set_params(self, epoch_tmin, l_freq, h_freq):
+        self.epoch_tmin = epoch_tmin
         self.l_freq = l_freq
         self.h_freq = h_freq
 
@@ -16,10 +16,8 @@ class Preprocessor:
         return self
 
     def transform(self, epochs):
-        sfreq = epochs.info['sfreq']
-        epochs = epochs.get_data()
-        epochs = mne.filter.filter_data(epochs, sfreq, self.l_freq, self.h_freq)
-        epochs = epochs[:, :, int(sfreq * self.trim_epoch):]
+        epochs = mne.filter.filter_data(epochs, 125, self.l_freq, self.h_freq)
+        epochs = epochs[:, :, int(125 * self.epoch_tmin):]
         return epochs
 
 
