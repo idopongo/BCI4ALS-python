@@ -25,10 +25,10 @@ def save_plots(rec_folder_name, bad_electrodes=[]):
     fig_psd.savefig(os.path.join(fig_path, "psd.png"))
 
     electrodes = ["C3", "C4", "Cz"]
-    class_spectrogram_fig = create_class_spectrogram_fig(raw, rec_params, electrodes)
+    class_spectrogram_fig = create_class_spectrogram_fig(raw, rec_params["trial_duration"], electrodes)
     class_spectrogram_fig.savefig(os.path.join(fig_path, f'class_spectrogram_{"_".join(electrodes)}.png'))
 
-    class_psd_fig = create_class_psd_fig(raw, electrodes, rec_params)
+    class_psd_fig = create_class_psd_fig(raw, rec_params["trial_duration"], electrodes)
     class_psd_fig.savefig(os.path.join(fig_path, f'class_psd_{"_".join(electrodes)}.png'))
 
 
@@ -40,7 +40,8 @@ def create_psd_fig(raw):
 def create_raw_fig(raw):
     events = mne.find_events(raw)
     event_dict = {marker.name: marker.value for marker in Marker}
-    fig = mne.viz.plot_raw(raw, events=events, clipping=None, show=False, event_id=event_dict)
+    fig = mne.viz.plot_raw(raw, events=events, clipping=None, show=False, event_id=event_dict, show_scrollbars=False,
+                           start=10)
     return fig
 
 
@@ -60,69 +61,59 @@ def load_raw(rec_folder_name):
     return raw, rec_params
 
 
-def calc_class_spectrogram(raw, rec_params, cls_marker, chan, time_before_stim):
-    events = mne.find_events(raw)
-    epochs = mne.Epochs(raw, events, Marker.all(), tmin=-time_before_stim, tmax=rec_params["trial_duration"],
-                        picks="data")
-    cls_epochs = epochs[str(cls_marker.value)].load_data().pick([chan])
+def calc_class_spectrogram(raw, trial_duration, cls_marker, chan, time_before_stim):
+    cls_epochs = mne.Epochs(raw, mne.find_events(raw), cls_marker, tmin=-time_before_stim, tmax=trial_duration,
+                            picks=[chan])
+    cls_epochs = cls_epochs.get_data().squeeze()
 
     sfreq = raw.info['sfreq']
     segments_per_second = 2
-    nperseg = int(sfreq / segments_per_second)
-    noverlap = nperseg * 0.3
-    nfft = 256
-    freq_range = (2, 40)
+    fft_params = {
+        "nperseg": int(sfreq / segments_per_second),
+        "noverlap": int(sfreq / segments_per_second) * 0.3,
+        "nfft": 256,
+        "scaling": "density"
+    }
 
-    # we calculate the power for the first epoch separately so that we have a variable of the right dimensions to sum onto
-    first_epoch = cls_epochs.next().squeeze()
-    _, _, total_pow = signal.spectrogram(first_epoch, sfreq, nperseg=nperseg, scaling="density",
-                                         nfft=nfft, noverlap=noverlap)
+    # we calculate the power for the first epoch separately so that we have a variable of the right dimensions to sum
+    # onto
+    _, _, avg_power = signal.spectrogram(cls_epochs[0], sfreq, **fft_params)
     for epoch in cls_epochs[1:]:
-        data = epoch.squeeze()
-        freq, time, power = signal.spectrogram(data, sfreq, nperseg=nperseg, nfft=nfft, scaling="density",
-                                               noverlap=noverlap)
-        total_pow += power
+        freq, time, power = signal.spectrogram(epoch, sfreq, **fft_params)
+        avg_power += power / len(cls_epochs)
 
-    avg_power = total_pow / len(cls_epochs)
+    freq_range = (2, 40)
     freq_idxs = (freq >= freq_range[0]) & (freq <= freq_range[1])
     freq = freq[freq_idxs]
     avg_power = avg_power[freq_idxs]
     return avg_power, freq, time
 
 
-def calc_class_psd(raw, rec_params, cls_marker, chan):
-    events = mne.find_events(raw)
-    epochs = mne.Epochs(raw, events, Marker.all(), tmax=rec_params["trial_duration"],
-                        picks="data", )
-    cls_epochs = epochs[str(cls_marker.value)].load_data().pick([chan])
-
+def calc_class_psd(raw, trial_duration, cls_marker, chan):
+    cls_epochs = mne.Epochs(raw, mne.find_events(raw), cls_marker, tmax=trial_duration, picks=[chan])
+    cls_epochs = cls_epochs.get_data().squeeze()
     sfreq = raw.info['sfreq']
 
     # calculate the first fft
-    first_epoch = cls_epochs.next().squeeze()
-    _, total_pxx = signal.welch(first_epoch, sfreq, scaling="density")
+    _, avg_power = signal.welch(cls_epochs[0], sfreq, scaling="density")
 
     for epoch in cls_epochs[1:]:
-        data = epoch.squeeze()
-        freq, pxx = signal.welch(data, sfreq, scaling="density")
+        freq, power = signal.welch(epoch, sfreq, scaling="density")
+        avg_power += power / len(cls_epochs)
 
-        total_pxx += pxx
-
-    avg_pxx = total_pxx / len(cls_epochs)
-    
     freq_range = (7, 30)
     freq_idxs = (freq >= freq_range[0]) & (freq <= freq_range[1])
     freq = freq[freq_idxs]
-    avg_pxx = avg_pxx[freq_idxs]
+    avg_pxx = avg_power[freq_idxs]
     return avg_pxx, freq
 
 
-def create_class_psd_fig(raw, electrodes, rec_params):
+def create_class_psd_fig(raw, trial_duration, electrodes):
     chans = [raw.info.ch_names.index(elec) for elec in electrodes]
     fig, axs = plt.subplots(len(chans), len(Marker.all()), figsize=(22, 11))
     for i, chan in enumerate(chans):
         for j, cls in enumerate(Marker):
-            power, freq = calc_class_psd(raw, rec_params, cls, chan)
+            power, freq = calc_class_psd(raw, trial_duration, cls, chan)
             ax = axs[i, j]
             ax.semilogy(freq, 10 * power)
             ax.set_ylabel('Power')
@@ -132,13 +123,13 @@ def create_class_psd_fig(raw, electrodes, rec_params):
     return fig
 
 
-def create_class_spectrogram_fig(raw, rec_params, electrodes):
+def create_class_spectrogram_fig(raw, trial_duration, electrodes):
     chans = [raw.info.ch_names.index(elec) for elec in electrodes]
     time_before_stim = 1
     fig, axs = plt.subplots(len(chans), len(Marker.all()), figsize=(22, 11))
     for i, chan in enumerate(chans):
         for j, cls in enumerate(Marker):
-            power, freq, time = calc_class_spectrogram(raw, rec_params, cls, chan, time_before_stim)
+            power, freq, time = calc_class_spectrogram(raw, trial_duration, cls, chan, time_before_stim)
             ax = axs[i, j]
             mesh = ax.pcolormesh(time, freq, 10 * np.log10(power), shading='auto', cmap="jet", )
             plt.colorbar(mesh, ax=ax)
