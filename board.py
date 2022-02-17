@@ -16,7 +16,7 @@ class Board:
         if use_synthetic:
             self.board_id = BoardIds.SYNTHETIC_BOARD
         else:
-            self.board_id = BoardIds.CYTON_BOARD
+            self.board_id = BoardIds.CYTON_DAISY_BOARD
             params.serial_port = find_serial_port()
         board = BoardShim(self.board_id, params)
 
@@ -41,7 +41,7 @@ class Board:
         marker_channel = BoardShim.get_marker_channel(self.board_id)
         recording[eeg_channels] = recording[eeg_channels] / 1e6  # BrainFlow returns uV, convert to V for MNE
         data = recording[eeg_channels + [marker_channel]]
-        ch_types = ['eeg'] * len(eeg_channels) + ['stim']
+        ch_types = (['eeg'] * len(eeg_channels)) + ['stim']
         ch_names = EEG_CHAN_NAMES + [EVENT_CHAN_NAME]
         sfreq = BoardShim.get_sampling_rate(self.board_id)
         info = mne.create_info(ch_names=ch_names, sfreq=sfreq, ch_types=ch_types)

@@ -16,7 +16,7 @@ import pickle
 
 
 def main():
-    raw, params = load_recordings("Haggai")
+    raw, params = load_recordings("David3")
     epochs, labels = get_epochs(raw, params["trial_duration"])
     best_hyperparams_haggai = {
         "features__sfreq": raw.info['sfreq'],

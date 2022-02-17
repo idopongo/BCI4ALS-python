@@ -43,5 +43,5 @@ def laplacian(raw):
 
 def preprocess(raw):
     raw.load_data()
-    raw = mne.preprocessing.compute_current_source_density(raw)
+    raw.filter(7, 30)
     return raw

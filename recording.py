@@ -13,7 +13,7 @@ from pipeline import load_pipeline, get_epochs
 def main():
     params = load_params()
     pipeline = load_pipeline('Haggai')
-    raw = run_session(params, pipeline)
+    raw = run_session(params)
     save_raw(raw, params)
 
 
@@ -41,16 +41,13 @@ def load_params():
 def run_session(params, pipeline=None):
     """
     Run a recording session, if pipeline is passed display prediction after every epoch
-    :param params:
-    :param pipeline:
-    :return:
     """
     # create list of random trials
     trial_markers = Marker.all() * params["trials_per_stim"]
     np.random.shuffle(trial_markers)
 
     # open psychopy window and display starting message
-    win = visual.Window(units="norm", color=(1, 1, 1), fullscr=False)
+    win = visual.Window(units="norm", color=(1, 1, 1), fullscr=params["full_screen"])
     start_msg = "Hit any key to start \n press Esc at any point to exit"
     visual.TextStim(win=win, pos=(0, 0.5), text=start_msg, color=(0, 0, 0)).draw()
     win.flip()
@@ -71,7 +68,7 @@ def run_session(params, pipeline=None):
                 prediction = pipeline.predict(epochs)[-1]
                 txt = classification_result_txt(win, marker, prediction)
                 show_stim_for_duration(win, txt, params["display_online_result_duration"])
-
+        win.close()
         return board.get_data()
 
 

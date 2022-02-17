@@ -14,6 +14,7 @@ from pipeline import get_subject_rec_folders
 def save_plots(rec_folder_name, bad_electrodes=[]):
     raw, rec_params = load_raw(rec_folder_name)
     raw = preprocess(raw)
+
     raw.info['bads'] = bad_electrodes
 
     fig_path = create_figures_folder(rec_folder_name)
@@ -63,17 +64,18 @@ def calc_class_spectrogram(raw, rec_params, cls_marker, chan, time_before_stim):
                         picks="data")
     cls_epochs = epochs[str(cls_marker.value)].load_data().pick([chan])
 
+    sfreq = raw.info['sfreq']
     segments_per_second = 2
-    nperseg = int(FS / segments_per_second)
+    nperseg = int(sfreq / segments_per_second)
     noverlap = nperseg * 0.3
     nfft = 256
     freq_range = (2, 40)
 
-    freq, time, total_pow = signal.spectrogram(cls_epochs.next().squeeze(), FS, nperseg=nperseg, scaling="density",
+    freq, time, total_pow = signal.spectrogram(cls_epochs.next().squeeze(), sfreq, nperseg=nperseg, scaling="density",
                                                nfft=nfft, noverlap=noverlap)
     for epoch in cls_epochs[1:]:
         data = epoch.squeeze()
-        freq, time, power = signal.spectrogram(data, FS, nperseg=nperseg, nfft=nfft, scaling="density",
+        freq, time, power = signal.spectrogram(data, sfreq, nperseg=nperseg, nfft=nfft, scaling="density",
                                                noverlap=noverlap)
         total_pow = total_pow + power
 
@@ -85,7 +87,7 @@ def calc_class_spectrogram(raw, rec_params, cls_marker, chan, time_before_stim):
 
 
 def create_class_spectrogram_fig(raw, rec_params, electrodes):
-    chans = [EEG_CHAN_NAMES.index(elec) for elec in electrodes]
+    chans = [raw.info.ch_names.index(elec) for elec in electrodes]
     time_before_stim = 1
     fig, axs = plt.subplots(len(chans), len(Marker.all()), figsize=(22, 11))
     for i, chan in enumerate(chans):
@@ -98,7 +100,7 @@ def create_class_spectrogram_fig(raw, rec_params, electrodes):
             ax.set_ylabel('Frequency [Hz]')
             ax.axvline(time_before_stim, color='r', linestyle="dashed", label="stimulus")
             ax.legend()
-            ax.set_title(f'{cls.name} {EEG_CHAN_NAMES[chan]}')
+            ax.set_title(f'{cls.name} {raw.info.ch_names[chan]}')
     fig.tight_layout()
     return fig
 
@@ -109,4 +111,4 @@ def save_plots_for_subject(subject_name):
 
 
 if __name__ == "__main__":
-    save_plots_for_subject("Syn")
+    save_plots_for_subject("David3")
