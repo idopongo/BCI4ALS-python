@@ -28,6 +28,8 @@ def save_plots(rec_folder_name, bad_electrodes=[]):
     class_spectrogram_fig = create_class_spectrogram_fig(raw, rec_params, electrodes)
     class_spectrogram_fig.savefig(os.path.join(fig_path, f'class_spectrogram_{"_".join(electrodes)}.png'))
 
+    class_psd_fig = create_class_psd_fig(raw, electrodes, rec_params)
+    class_psd_fig.savefig(os.path.join(fig_path, f'class_psd_{"_".join(electrodes)}.png'))
 
 def create_psd_fig(raw):
     fig = mne.viz.plot_raw_psd(raw, fmin=7, fmax=30, show=False)
@@ -69,19 +71,66 @@ def calc_class_spectrogram(raw, rec_params, cls_marker, chan, time_before_stim):
     nfft = 256
     freq_range = (2, 40)
 
-    _, _, total_pow = signal.spectrogram(cls_epochs.next().squeeze(), FS, nperseg=nperseg, scaling="density",
+    # we calculate the power for the first epoch separately so that we have a variable of the right dimensions to sum onto
+    first_epoch = cls_epochs.next().squeeze()
+    _, _, total_pow = signal.spectrogram(first_epoch, FS, nperseg=nperseg, scaling="density",
                                          nfft=nfft, noverlap=noverlap)
     for epoch in cls_epochs[1:]:
         data = epoch.squeeze()
         freq, time, power = signal.spectrogram(data, FS, nperseg=nperseg, nfft=nfft, scaling="density",
                                                noverlap=noverlap)
-        total_pow = total_pow + power
+        total_pow += power
 
     avg_power = total_pow / len(cls_epochs)
     freq_idxs = (freq >= freq_range[0]) & (freq <= freq_range[1])
     freq = freq[freq_idxs]
     avg_power = avg_power[freq_idxs]
     return 10 * np.log10(avg_power), freq, time
+
+
+def calc_class_psd(raw, rec_params, cls_marker, chan, time_before_stim):
+    events = mne.find_events(raw)
+    epochs = mne.Epochs(raw, events, Marker.all(), tmin=-time_before_stim, tmax=rec_params["trial_duration"],
+                        picks="data")
+    cls_epochs = epochs[str(cls_marker.value)].load_data().pick([chan])
+
+    segments_per_second = 2
+    nperseg = int(FS / segments_per_second)
+    noverlap = nperseg * 0.3
+    nfft = 256
+    freq_range = (2, 40)
+
+    # calculate the first fft
+    first_epoch = cls_epochs.next().squeeze()
+    _, total_pxx = signal.welch(first_epoch, FS,nperseg=nperseg, scaling="density", nfft=nfft, noverlap=noverlap)
+
+    for epoch in cls_epochs[1:]:
+        data = epoch.squeeze()
+        freq, pxx = signal.welch(data, FS, nperseg=nperseg, scaling="density", nfft=nfft, noverlap=noverlap)
+
+        total_pxx += pxx
+
+    avg_pxx = total_pxx / len(cls_epochs)
+    freq_idxs = (freq >= freq_range[0]) & (freq <= freq_range[1])
+    freq = freq[freq_idxs]
+    avg_pxx = avg_pxx[freq_idxs]
+    return avg_pxx, freq
+
+
+def create_class_psd_fig(raw, electrodes, rec_params):
+    chans = [EEG_CHAN_NAMES.index(elec) for elec in electrodes]
+    time_before_stim = 1
+    fig, axs = plt.subplots(len(chans), len(Marker.all()), figsize=(22, 11))
+    for i, chan in enumerate(chans):
+        for j, cls in enumerate(Marker):
+            power, freq = calc_class_psd(raw, rec_params, cls, chan, time_before_stim)
+            ax = axs[i, j]
+            ax.semilogy(freq, power)
+            ax.set_ylabel('Power')
+            ax.set_xlabel('Frequency [Hz]')
+            ax.set_title(f'{cls.name} {EEG_CHAN_NAMES[chan]}')
+    fig.tight_layout()
+    return fig
 
 
 def create_class_spectrogram_fig(raw, rec_params, electrodes):
