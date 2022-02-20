@@ -13,18 +13,43 @@ import numpy as np
 from constants import *
 from sklearn.model_selection import GridSearchCV
 import pickle
+from recording import load_params
+
+DEFAULT_HYPERPARAMS = {
+    "features__n_fft": 250,
+    "features__n_per_seg": 62,
+    "features__n_overlap": 0.2,
+    "features__freq_bands": [
+        8,
+        12,
+        20,
+        30
+    ],
+    "preprocessor__trim_epoch": 1,
+    "preprocessor__l_freq": 2,
+    "preprocessor__h_freq": 24
+}
 
 
 def main():
-    subject = "David3"
+    params = load_params()
+    subject = params["subject"]
+
+    # get data, epochs
     raw, params = load_recordings(subject)
     epochs, labels = get_epochs(raw, params["trial_duration"])
     epochs = epochs.get_data()
+
+    # grid search (this takes some time, so comment it out if you just want to create a model with the default params)
     best_params = grid_search_pipeline_hyperparams(epochs, labels)
     save_hyperparams(best_params, subject)
+
+    # create a pipeline from params
     pipeline = create_pipeline(best_params)
     pipeline.fit(epochs, labels)
     save_pipeline(pipeline, subject)
+
+    # Evaluate pipeline performance
     skf = RepeatedStratifiedKFold(n_splits=4, n_repeats=10)
     scores = cross_val_score(pipeline, epochs, labels, cv=skf)
     print(

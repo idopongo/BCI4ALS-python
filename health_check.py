@@ -4,11 +4,12 @@ import numpy as np
 import scipy.signal
 import scipy.stats
 import mne
-
+from recording import load_params
 
 def health_check():
+    params = load_params()
     window_size = 2
-    with Board(use_synthetic=False) as board:
+    with Board(use_synthetic=params["use_synthetic_board"]) as board:
         plt.ion()
         ax = create_figure(len(board.eeg_channels))
         chan_plots = plot_chans(board.channel_names, window_size, ax)
