@@ -1,13 +1,5 @@
 import numpy as np
-from constants import *
 from mne_features.univariate import compute_pow_freq_bands
-
-FREQ_BANDS = [8, 10, 12, 20, 30]
-
-
-def get_features(data, psd_params):
-    band_power = np.array([compute_pow_freq_bands(FS, epoch, FREQ_BANDS, psd_params=psd_params) for epoch in data])
-    return band_power
 
 
 class FeatureExtractor:
@@ -26,12 +18,14 @@ class FeatureExtractor:
     def fit(self, data, labels):
         return self
 
-    def transform(self, data):
+    def transform(self, epochs):
         psd_params = {
             "welch_n_fft": self.n_fft,
             "welch_n_per_seg": self.n_per_seg,
             "welch_n_overlap": self.n_overlap,
         }
+        sfreq = 125
         band_power = np.array(
-            [compute_pow_freq_bands(FS, epoch, self.freq_bands, psd_params=psd_params) for epoch in data])
+            [compute_pow_freq_bands(sfreq, epoch, self.freq_bands, psd_params=psd_params) for epoch in epochs]
+        )
         return band_power

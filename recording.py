@@ -1,25 +1,26 @@
-from brainflow import BrainFlowInputParams
-from psychopy import core, visual
+from psychopy import visual, core, event
 import numpy as np
-from time import sleep
 import os
 from datetime import datetime
 from pathlib import Path
 from Marker import Marker
 from constants import *
-import mne
+from board import Board
 import json
-from serial.tools import list_ports
+from pipeline import load_pipeline, get_epochs
+
+BG_COLOR = "black"
+STIM_COLOR = "white"
 
 
 def main():
     params = load_params()
-    raw = run_session(params)
+    pipeline = load_pipeline('David3')
+    raw = run_session(params, pipeline)
     save_raw(raw, params)
 
 
-def save_raw():
-    raw = self.raw
+def save_raw(raw, params):
     folder_path = create_session_folder(params["subject"])
     raw.save(os.path.join(folder_path, "raw.fif"))
     with open(os.path.join(folder_path, "params.json"), 'w', encoding='utf-8') as f:
@@ -40,80 +41,87 @@ def load_params():
     return params
 
 
-def run_session(self):
-    params = self.params
-    trial_stims = Marker.all() * params["trials_per_stim"]
-    np.random.shuffle(trial_stims)
+def run_session(params, pipeline=None):
+    """
+    Run a recording session, if pipeline is passed display prediction after every epoch
+    """
+    # create list of random trials
+    trial_markers = Marker.all() * params["trials_per_stim"]
+    np.random.shuffle(trial_markers)
+
+    # open psychopy window and display starting message
+    win = visual.Window(units="norm", color=BG_COLOR, fullscr=params["full_screen"])
+    msg1 = "Hit any key to start, press Esc at any point to exit"
+    loop_through_messages(win, [msg1])
+
     # start recording
-    board = create_board()
-    board.config_board(HARDWARE_SETTINGS_MSG)
-    board.start_stream()
-    # TODO: Add calibration text
-    sleep(5)
-    # display trials
-    win = visual.Window(units="norm", color=(1, 1, 1))
-    counter = 1
-    total = len(trial_stims)
-    for stim in trial_stims:
-        show_stim_progress(win, counter, total, stim)
-        win.update()
-        sleep(params["get_ready_duration"])
-        win.flip()
-        sleep(params["calibration_duration"])
-        show_stimulus(win, stim)
-        win.update()
-        board.insert_marker(stim)
-        sleep(params["trial_duration"])
-        win.flip()
-        counter = counter + 1
-    sleep(params["get_ready_duration"])
-    # stop recording
-    raw = convert_to_mne(board.get_board_data())
-    board.stop_stream()
-    board.release_session()
-    self.raw = raw
-    return raw
+    with Board(use_synthetic=params["use_synthetic_board"]) as board:
+        for i, marker in enumerate(trial_markers):
+            show_stim_for_duration(win, progress_text(win, i + 1, len(trial_markers), marker),
+                                   params["get_ready_duration"])
+            core.wait(params["calibration_duration"])
+            board.insert_marker(marker)
+            show_stim_for_duration(win, marker_stim(win, marker), params["trial_duration"])
+
+            if pipeline:
+                # get epoch and display prediction
+                core.wait(0.5)
+                epochs, _ = get_epochs(board.get_data(), params["trial_duration"], markers=marker)
+                prediction = pipeline.predict(epochs.get_data())[-1]
+                txt = classification_result_txt(win, marker, prediction)
+                show_stim_for_duration(win, txt, params["display_online_result_duration"])
+        win.close()
+        return board.get_data()
 
 
-def show_stim_progress(win, counter, total, stim):
-    txt = visual.TextStim(win=win, text=f'trial {counter}/{total}\n get ready for {Marker(stim).name}', color=(0, 0, 0),
-                          bold=True, pos=(0, 0.8))
+def loop_through_messages(win, messages):
+    for msg in messages:
+        visual.TextStim(win=win, text=msg, color=STIM_COLOR).draw()
+        win.flip()
+        keys_pressed = event.waitKeys()
+        if 'escape' in keys_pressed:
+            core.quit()
+        if 'backspace' in keys_pressed:
+            break
+
+
+def marker_stim(win, marker):
+    shape = visual.ShapeStim(win, vertices=Marker(marker).shape, fillColor=STIM_COLOR, size=.5)
+    return shape
+
+
+def show_stim_for_duration(win, stim, duration):
+    # Adding this code here is an easy way to make sure we check for an escape event before showing any stimulus
+    if 'escape' in event.getKeys():
+        core.quit()
+
+    stim.draw()  # draw stim on back buffer
+    win.flip()  # flip the front and back buffers and then clear the back buffer
+    core.wait(duration)
+    win.flip()  # flip back to the (now empty) back buffer
+
+
+def progress_text(win, done, total, stim):
+    txt = visual.TextStim(win=win, text=f'trial {done}/{total}\n get ready for {Marker(stim).name}', color=STIM_COLOR,
+                          bold=True, alignHoriz='center', alignVert='center')
     txt.font = 'arial'
-    txt.draw()
+    return txt
 
 
-def show_stimulus(win, stim):
-    visual.ImageStim(win=win, image=Marker(stim).image_path, units="norm", size=2, color=(1, 1, 1)).draw()
+def classification_result_txt(win, marker, prediction):
+    if marker == prediction:
+        msg = 'correct prediction'
+        col = (0, 1, 0)
+    else:
+        msg = 'incorrect prediction'
+        col = (1, 0, 0)
+    return visual.TextStim(win=win, text=f'label: {Marker(marker).name}\nprediction: {Marker(prediction).name}\n{msg}',
+                           color=col,
+                           bold=True, alignHoriz='center', alignVert='center', font='arial', )
 
 
-def create_board():
-    params = BrainFlowInputParams()
-    params.serial_port = find_serial_port()
-    board = BoardShim(BOARD_ID, params)
-    board.prepare_session()
-    return board
-
-
-def convert_to_mne(recording):
-    recording[EEG_CHANNELS] = recording[EEG_CHANNELS] / 1e6  # BrainFlow returns uV, convert to V for MNE
-    data = recording[EEG_CHANNELS + [MARKER_CHANNEL]]
-    ch_types = ['eeg'] * len(EEG_CHANNELS) + ['stim']
-    ch_names = EEG_CHAN_NAMES + [EVENT_CHAN_NAME]
-    info = mne.create_info(ch_names=ch_names, sfreq=FS, ch_types=ch_types)
-    raw = mne.io.RawArray(data, info)
-    raw.set_montage("standard_1020")
-    return raw
-
-
-def find_serial_port():
-    plist = list_ports.comports()
-    FTDIlist = [comport for comport in plist if comport.manufacturer == 'FTDI']
-    if len(FTDIlist) > 1:
-        raise LookupError(
-            "More than one FTDI-manufactured device is connected. Please enter serial_port manually.")
-    if len(FTDIlist) < 1:
-        raise LookupError("FTDI-manufactured device not found. Please check the dongle is connected")
-    return FTDIlist[0].name
+def marker_image(win, marker):
+    return visual.ImageStim(win=win, image=Marker(marker).image_path, units="norm", size=2, color=(1, 1, 1))
 
 
 if __name__ == "__main__":
