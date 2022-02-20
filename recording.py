@@ -65,8 +65,8 @@ def run_session(params, pipeline=None):
 
             if pipeline:
                 # get epoch and display prediction
+                core.wait(0.5)
                 epochs, _ = get_epochs(board.get_data(), params["trial_duration"], markers=marker)
-                print(epochs.get_data())
                 prediction = pipeline.predict(epochs.get_data())[-1]
                 txt = classification_result_txt(win, marker, prediction)
                 show_stim_for_duration(win, txt, params["display_online_result_duration"])

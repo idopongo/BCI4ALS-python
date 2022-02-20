@@ -46,3 +46,6 @@ def create_square_shape():
     Vert = [(-0.5, -0.5), (-0.5, 0.5), (0.5, 0.5), (0.5, -0.5)]
     Vert = [(scale * width * x, scale * height * y) for (x, y) in Vert]
     return Vert
+
+
+create_arrow_shape()
