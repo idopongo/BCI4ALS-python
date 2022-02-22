@@ -2,24 +2,51 @@ from board import Board
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal
+from scipy import signal
 import scipy.stats
 import mne
 
 
 def health_check():
     window_size = 2
-    with Board(use_synthetic=False) as board:
+    with Board(use_synthetic=True) as board:
         plt.ion()
         ax = create_figure(len(board.eeg_channels))
         chan_plots = plot_chans(board.channel_names, window_size, ax)
-        montage_plot, chan_error_texts = plot_montage(board.channel_names, ax["right"])
+        montage_plot, chan_error_texts = plot_montage(board.channel_names, ax["upright"])
+        psd_plot = plot_psd(ax["downright"])
         while True:
             data = get_next_data(board, window_size)
+            fs = board.sfreq
             errors_by_chan = check_chan_health(data)
             update_chan_plots(chan_plots, data, window_size)
             update_montage_plot(ax, montage_plot, errors_by_chan, chan_error_texts)
+            update_psd_plot(ax, psd_plot, data)
             plt.draw()
             plt.pause(1e-3)
+
+
+def plot_psd(ax):
+    ax.set_ylabel('Power')
+    ax.set_xlabel('Frequency [Hz]')
+    ax.set_title(f'power spectrum')
+    return ax
+
+
+def update_psd_plot(ax, psd_plot, data, sfreq):
+    _, avg_power = signal.welch(data[0], sfreq, scaling="density")
+
+    for chan in data[1:]:
+        freq, power = signal.welch(chan, sfreq, scaling="density")
+        avg_power += power / len(data)
+
+    freq_range = (7, 30)
+    freq_idxs = (freq >= freq_range[0]) & (freq <= freq_range[1])
+    freq = freq[freq_idxs]
+    avg_pxx = avg_power[freq_idxs]
+    return avg_pxx, freq
+    fig = mne.viz.plot_raw_psd(data, fmin=7, fmax=30)
+    psd_plot.set_data(fig)
 
 
 def on_press(event):
@@ -28,7 +55,8 @@ def on_press(event):
 
 
 def create_figure(num_chans):
-    fig, ax = plt.subplot_mosaic([[i, "right"] for i in range(num_chans)])
+    scale_num = 2/3
+    fig, ax = plt.subplot_mosaic([[i, "upright"] if 0 <= i < scale_num * num_chans else [i, "downright"] for i in range(num_chans)])
     fig.subplots_adjust(left=0.1)
     fig.canvas.mpl_connect('key_press_event', on_press)
     return ax
@@ -56,17 +84,18 @@ def update_chan_plots(chan_plots, data, window_size):
 
 
 def plot_montage(ch_names, ax):
+    scale_num = 1/4
     # Get channel positions from standard_1020 montage
     montage = mne.channels.make_standard_montage('standard_1020')
     ch_pos = {key: value for key, value in montage.get_positions()["ch_pos"].items() if key in ch_names}
-    x = [pos[0] for pos in ch_pos.values()]
-    y = [pos[1] for pos in ch_pos.values()]
+    x = [scale_num*pos[0] for pos in ch_pos.values()]
+    y = [scale_num*pos[1] for pos in ch_pos.values()]
     ax.axis('off')
     montage_plot = ax.scatter(x, y, 600, "white", edgecolor="black")
     chan_error_texts = []
     for ch_name, pos in ch_pos.items():
-        ax.text(pos[0], pos[1], ch_name, ha="center", va="center")
-        chan_error_texts.append(ax.text(pos[0], pos[1] - 0.01, "errors: ", ha="center", va="center"))
+        ax.text(scale_num*pos[0], scale_num*pos[1], ch_name, ha="center", va="center")
+        chan_error_texts.append(ax.text(scale_num*pos[0], scale_num*pos[1], "errors: ", ha="center", va="center"))
         ax.set_xticks([])
         ax.set_yticks([])
     return montage_plot, chan_error_texts
