@@ -2,7 +2,7 @@ import mne
 from Marker import Marker
 import os
 import json
-from preprocessing import Preprocessor
+from preprocessing import Preprocessor, reject_epochs
 from features import FeatureExtractor
 from classifier import create_classifier
 import scipy.io
@@ -16,9 +16,12 @@ import pickle
 
 
 def main():
-    subject = "David3"
+    subject = "David2"
     raw, params = load_recordings(subject)
     epochs, labels = get_epochs(raw, params["trial_duration"])
+
+    reject_epochs(epochs)
+
     epochs = epochs.get_data()
     best_params = grid_search_pipeline_hyperparams(epochs, labels)
     save_hyperparams(best_params, subject)
