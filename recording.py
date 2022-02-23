@@ -31,7 +31,7 @@ def create_session_folder(subj):
     return folder_path
 
 
-def load_params():
+def load_rec_params():
     with open(RECORDING_PARAMS_PATH) as file:
         params = json.load(file)
     return params
