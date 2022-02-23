@@ -1,5 +1,6 @@
 from board import Board
 import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
 import numpy as np
 import scipy.signal
 from scipy import signal
@@ -21,7 +22,7 @@ def health_check():
             errors_by_chan = check_chan_health(data)
             update_chan_plots(chan_plots, data, window_size)
             update_montage_plot(ax, montage_plot, errors_by_chan, chan_error_texts)
-            update_psd_plot(ax, psd_plot, data)
+            update_psd_plot(ax["downright"], psd_plot, data, fs)
             plt.draw()
             plt.pause(1e-3)
 
@@ -30,23 +31,19 @@ def plot_psd(ax):
     ax.set_ylabel('Power')
     ax.set_xlabel('Frequency [Hz]')
     ax.set_title(f'power spectrum')
+    ax.grid(True)
     return ax
 
 
 def update_psd_plot(ax, psd_plot, data, sfreq):
-    _, avg_power = signal.welch(data[0], sfreq, scaling="density")
+    # psd_plot.figure(clear=True)
+    for i in range(len(data)):
+        freq, power = signal.welch(data[i], sfreq, scaling="density")
+        ax.plot(freq, power)
+        ax.psd(data[i], Fs=sfreq, scale_by_freq=True)
 
-    for chan in data[1:]:
-        freq, power = signal.welch(chan, sfreq, scaling="density")
-        avg_power += power / len(data)
+    # ax.psd(data[0], Fs=sfreq, scale_by_freq=True)
 
-    freq_range = (7, 30)
-    freq_idxs = (freq >= freq_range[0]) & (freq <= freq_range[1])
-    freq = freq[freq_idxs]
-    avg_pxx = avg_power[freq_idxs]
-    return avg_pxx, freq
-    fig = mne.viz.plot_raw_psd(data, fmin=7, fmax=30)
-    psd_plot.set_data(fig)
 
 
 def on_press(event):
@@ -84,10 +81,10 @@ def update_chan_plots(chan_plots, data, window_size):
 
 
 def plot_montage(ch_names, ax):
-    scale_num = 1/4
+    scale_num = 2/3
     # Get channel positions from standard_1020 montage
     montage = mne.channels.make_standard_montage('standard_1020')
-    ch_pos = {key: value for key, value in montage.get_positions()["ch_pos"].items() if key in ch_names}
+    ch_pos = {key: value*scale_num for key, value in montage.get_positions()["ch_pos"].items() if key in ch_names}
     x = [scale_num*pos[0] for pos in ch_pos.values()]
     y = [scale_num*pos[1] for pos in ch_pos.values()]
     ax.axis('off')
