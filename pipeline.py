@@ -16,13 +16,12 @@ import pickle
 
 
 def main():
-    subject = "David2"
+    subject = "David"
     raw, params = load_recordings(subject)
     epochs, labels = get_epochs(raw, params["trial_duration"])
 
-    reject_epochs(epochs)
-
-    epochs = epochs.get_data()
+    epochs = reject_epochs(epochs)
+    # epochs = epochs.get_data()
     best_params = grid_search_pipeline_hyperparams(epochs, labels)
     save_hyperparams(best_params, subject)
     pipeline = create_pipeline(best_params)

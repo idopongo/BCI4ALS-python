@@ -1,4 +1,5 @@
 import mne
+import numpy as np
 
 
 class Preprocessor:
@@ -60,13 +61,7 @@ def reject_epochs(epochs):
             elif abs(curr_chan.max()) > rejected_max_val:
                 bad_chan.append(i)
 
-        if len(bad_chan) > 3:
+        if len(bad_chan) > 10:  # this number need to change
             bad_epoch.append(epoch_idx)
 
-
-
-
-
-
-
-
+    return np.delete(epochs, bad_epoch, axis=0)
