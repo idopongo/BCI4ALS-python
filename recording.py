@@ -7,24 +7,20 @@ from Marker import Marker
 from constants import *
 from board import Board
 import json
-from pipeline import load_pipeline, get_epochs
+from pipeline import get_epochs
 
 BG_COLOR = "black"
 STIM_COLOR = "white"
-
-
-def main():
-    params = load_params()
-    pipeline = load_pipeline('David3')
-    raw = run_session(params, pipeline)
-    save_raw(raw, params)
+SYNTHETIC_SUBJECT_NAME = "Synthetic"
 
 
 def save_raw(raw, params):
-    folder_path = create_session_folder(params["subject"])
+    subject = params["subject"] if not params["use_synthetic_board"] else SYNTHETIC_SUBJECT_NAME
+    folder_path = create_session_folder(subject)
     raw.save(os.path.join(folder_path, "raw.fif"))
     with open(os.path.join(folder_path, "params.json"), 'w', encoding='utf-8') as f:
         json.dump(params, f, ensure_ascii=False, indent=4)
+    return os.path.basename(folder_path)
 
 
 def create_session_folder(subj):
@@ -35,7 +31,7 @@ def create_session_folder(subj):
     return folder_path
 
 
-def load_params():
+def load_rec_params():
     with open(RECORDING_PARAMS_PATH) as file:
         params = json.load(file)
     return params
@@ -57,19 +53,32 @@ def run_session(params, pipeline=None):
     # start recording
     with Board(use_synthetic=params["use_synthetic_board"]) as board:
         for i, marker in enumerate(trial_markers):
+            # "get ready" period
             show_stim_for_duration(win, progress_text(win, i + 1, len(trial_markers), marker),
                                    params["get_ready_duration"])
+            # calibration period
             core.wait(params["calibration_duration"])
+
+            # motor imagery period
             board.insert_marker(marker)
             show_stim_for_duration(win, marker_stim(win, marker), params["trial_duration"])
 
             if pipeline:
-                # get epoch and display prediction
+                # We need to wait a short time between the end of the trial and trying to get it's data to make sure
+                # that we have recorded (trial_duration * sfreq) samples after the latest marker (otherwise the epoch
+                # will be too short)
                 core.wait(0.5)
-                epochs, _ = get_epochs(board.get_data(), params["trial_duration"], markers=marker)
+
+                # get latest epoch and make prediction
+                raw = board.get_data()
+                print(len(raw))
+                epochs, _ = get_epochs(raw, params["trial_duration"], markers=marker)
                 prediction = pipeline.predict(epochs.get_data())[-1]
+
+                # display prediction result
                 txt = classification_result_txt(win, marker, prediction)
                 show_stim_for_duration(win, txt, params["display_online_result_duration"])
+        core.wait(0.1)
         win.close()
         return board.get_data()
 
@@ -91,7 +100,7 @@ def marker_stim(win, marker):
 
 
 def show_stim_for_duration(win, stim, duration):
-    # Adding this code here is an easy way to make sure we check for an escape event before showing any stimulus
+    # Adding this code here is an easy way to make sure we check for an escape event before showing every stimulus
     if 'escape' in event.getKeys():
         core.quit()
 

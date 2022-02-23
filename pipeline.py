@@ -14,24 +14,41 @@ from constants import *
 from sklearn.model_selection import GridSearchCV
 import pickle
 
+DEFAULT_HYPERPARAMS = {
+    "preprocessing__epoch_tmin": 1,
+    "preprocessing__l_freq": 2,
+    "preprocessing__h_freq": 24,
+    "feature_extraction__n_fft": 250,
+    "feature_extraction__n_per_seg": 62,
+    "feature_extraction__n_overlap": 0.2,
+    "feature_extraction__freq_bands": [
+        8,
+        12,
+        20,
+        30
+    ],
+}
 
-def main():
-    subject = "David3"
-    raw, params = load_recordings(subject)
-    epochs, labels = get_epochs(raw, params["trial_duration"])
-    epochs = epochs.get_data()
-    best_params = grid_search_pipeline_hyperparams(epochs, labels)
-    save_hyperparams(best_params, subject)
-    pipeline = create_pipeline(best_params)
-    pipeline.fit(epochs, labels)
-    save_pipeline(pipeline, subject)
+
+def evaluate_pipeline(pipeline, epochs, labels):
     skf = RepeatedStratifiedKFold(n_splits=4, n_repeats=10)
     scores = cross_val_score(pipeline, epochs, labels, cv=skf)
     print(
         f'features classifier accuracy: \n mean: {np.round(np.mean(scores), 2)} \n std: {np.round(np.std(scores), 3)}')
 
 
-def create_pipeline(hyperparams={}):
+def create_and_fit_pipeline(raw, recording_params, hyperparams=DEFAULT_HYPERPARAMS):
+    # get data, epochs
+    epochs, labels = get_epochs(raw, recording_params["trial_duration"])
+    epochs = epochs.get_data()
+
+    # create a pipeline from params
+    pipeline = create_pipeline(hyperparams)
+    pipeline.fit(epochs, labels)
+    return pipeline, epochs, labels
+
+
+def create_pipeline(hyperparams=DEFAULT_HYPERPARAMS):
     lda = LinearDiscriminantAnalysis()
     pipeline = Pipeline([('preprocessing', Preprocessor()), ('feature_extraction', FeatureExtractor()), ('lda', lda)])
     pipeline.set_params(**hyperparams)
@@ -52,7 +69,7 @@ def load_pipeline(name):
 
 
 def save_hyperparams(hyperparams, name):
-    filename = f'{name}_hyperparams.json'
+    filename = os.path.join(PIPELINES_DIR, f'{name}_hyperparams.json')
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(hyperparams, f, ensure_ascii=False, indent=4)
 
@@ -80,6 +97,11 @@ def grid_search_pipeline_hyperparams(epochs, labels):
 def get_epochs(raw, trial_duration, markers=Marker.all()):
     events = mne.find_events(raw)
     epochs = mne.Epochs(raw, events, markers, tmin=-1, tmax=trial_duration, picks="data", baseline=(-1, 0))
+
+    # running get data triggers dropping of epochs, we want to make sure this happens now so that the labels are consistent with
+    # the epochs
+    epochs.get_data()
+
     labels = epochs.events[:, -1]
     return epochs, labels
 
@@ -118,4 +140,5 @@ def matlab_data_pipeline():
 
 
 if __name__ == "__main__":
-    main()
+    raw, params = load_recordings("Synthetic")
+    create_and_fit_pipeline(raw, params)
