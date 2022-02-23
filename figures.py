@@ -11,7 +11,7 @@ from preprocessing import preprocess
 from pipeline import get_subject_rec_folders
 
 
-def save_plots(rec_folder_name, bad_electrodes=[]):
+def create_and_save_plots(rec_folder_name, bad_electrodes=[]):
     raw, rec_params = load_raw(rec_folder_name)
     raw = preprocess(raw)
     raw.info['bads'] = bad_electrodes
@@ -144,7 +144,7 @@ def create_class_spectrogram_fig(raw, trial_duration, electrodes):
 
 def save_plots_for_subject(subject_name):
     rec_folders = get_subject_rec_folders(subject_name)
-    [save_plots(folder) for folder in rec_folders]
+    [create_and_save_plots(folder) for folder in rec_folders]
 
 
 if __name__ == "__main__":

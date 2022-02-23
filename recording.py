@@ -7,19 +7,11 @@ from Marker import Marker
 from constants import *
 from board import Board
 import json
-from pipeline import load_pipeline, get_epochs
-from figures import save_plots
+from pipeline import get_epochs
 
 BG_COLOR = "black"
 STIM_COLOR = "white"
 SYNTHETIC_SUBJECT_NAME = "Synthetic"
-
-def main():
-    params = load_params()
-    pipeline = load_pipeline(params["subject"])
-    raw = run_session(params, pipeline)
-    folder_path = save_raw(raw, params)
-    save_plots(os.path.basename(folder_path))
 
 
 def save_raw(raw, params):
@@ -28,7 +20,7 @@ def save_raw(raw, params):
     raw.save(os.path.join(folder_path, "raw.fif"))
     with open(os.path.join(folder_path, "params.json"), 'w', encoding='utf-8') as f:
         json.dump(params, f, ensure_ascii=False, indent=4)
-    return folder_path
+    return os.path.basename(folder_path)
 
 
 def create_session_folder(subj):
@@ -75,7 +67,7 @@ def run_session(params, pipeline=None):
                 # We need to wait a short time between the end of the trial and trying to get it's data to make sure
                 # that we have recorded (trial_duration * sfreq) samples after the latest marker (otherwise the epoch
                 # will be too short)
-                core.wait(0.1)
+                core.wait(0.5)
 
                 # get latest epoch and make prediction
                 raw = board.get_data()
@@ -86,6 +78,7 @@ def run_session(params, pipeline=None):
                 # display prediction result
                 txt = classification_result_txt(win, marker, prediction)
                 show_stim_for_duration(win, txt, params["display_online_result_duration"])
+        core.wait(0.1)
         win.close()
         return board.get_data()
 
