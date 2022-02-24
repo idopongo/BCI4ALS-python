@@ -40,7 +40,7 @@ def create_and_fit_pipeline(raw, recording_params, hyperparams=DEFAULT_HYPERPARA
     # get data, epochs
     epochs, labels = get_epochs(raw, recording_params["trial_duration"])
     epochs, labels = reject_epochs(epochs, labels)
-    
+
     # create a pipeline from params
     pipeline = create_pipeline(hyperparams)
     pipeline.fit(epochs, labels)
