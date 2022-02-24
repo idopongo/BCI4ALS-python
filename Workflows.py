@@ -30,4 +30,4 @@ def find_best_hyperparams_for_subject(subject):
 
 if __name__ == "__main__":
     # find_best_hyperparams_for_subject("Haggai2")
-    create_pipeline_for_subject("David")
+    create_pipeline_for_subject("Ido2")

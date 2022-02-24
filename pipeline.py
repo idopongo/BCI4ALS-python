@@ -2,7 +2,7 @@ import mne
 from Marker import Marker
 import os
 import json
-from preprocessing import Preprocessor, reject_epochs
+from preprocessing import Preprocessor, reject_epochs, find_average_voltage
 from features import FeatureExtractor
 import scipy.io
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
@@ -41,6 +41,7 @@ def create_and_fit_pipeline(raw, recording_params, hyperparams=DEFAULT_HYPERPARA
     epochs, labels = get_epochs(raw, recording_params["trial_duration"])
     epochs, labels = reject_epochs(epochs, labels)
 
+    vol_per_chan = find_average_voltage(epochs)
     # create a pipeline from params
     pipeline = create_pipeline(hyperparams)
     pipeline.fit(epochs, labels)
