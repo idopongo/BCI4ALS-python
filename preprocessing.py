@@ -60,7 +60,7 @@ def reject_epochs(epochs, labels):
             elif abs(curr_chan.max()) > rejected_max_val:
                 bad_chan.append(i)
 
-        if len(bad_chan) > 2
+        if len(bad_chan) > 2:
             bad_epoch.append(epoch_idx)
 
     return np.delete(epochs, bad_epoch, axis=0), np.delete(labels, bad_epoch, axis=0)
