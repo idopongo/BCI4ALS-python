@@ -2,7 +2,7 @@ import mne
 from Marker import Marker
 import os
 import json
-from preprocessing import Preprocessor
+from preprocessing import Preprocessor, reject_epochs
 from features import FeatureExtractor
 import scipy.io
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
@@ -39,7 +39,7 @@ def evaluate_pipeline(pipeline, epochs, labels):
 def create_and_fit_pipeline(raw, recording_params, hyperparams=DEFAULT_HYPERPARAMS):
     # get data, epochs
     epochs, labels = get_epochs(raw, recording_params["trial_duration"])
-    epochs = epochs.get_data()
+    epochs, labels = reject_epochs(epochs, labels)
 
     # create a pipeline from params
     pipeline = create_pipeline(hyperparams)

@@ -1,4 +1,5 @@
 import mne
+import numpy as np
 
 
 class Preprocessor:
@@ -43,3 +44,23 @@ def preprocess(raw):
     raw.load_data()
     raw.filter(7, 30)
     return raw
+
+def reject_epochs(epochs, labels):
+    rejected_max_val = 300 * 1e-6
+    rejected_min_val = 5 * 1e-6
+    epochs = epochs.get_data()  # array of shape (n_epochs, n_channels, n_times)
+
+    bad_epoch = []
+    for epoch_idx, epoch in enumerate(epochs):
+        bad_chan = []
+        for i in range(len(epoch[:, 1])):
+            curr_chan = epoch[i, :]
+            if abs(curr_chan.min()) < rejected_min_val:
+                bad_chan.append(i)
+            elif abs(curr_chan.max()) > rejected_max_val:
+                bad_chan.append(i)
+
+        if len(bad_chan) > 2:
+            bad_epoch.append(epoch_idx)
+
+    return np.delete(epochs, bad_epoch, axis=0), np.delete(labels, bad_epoch, axis=0)

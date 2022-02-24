@@ -1,3 +1,4 @@
 .idea/*
 __pycache__/*
 recording_params.json
+venv/*
