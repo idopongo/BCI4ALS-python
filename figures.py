@@ -148,4 +148,4 @@ def save_plots_for_subject(subject_name):
 
 
 if __name__ == "__main__":
-    save_plots_for_subject("Synthetic")
+    save_plots_for_subject("Ido4")

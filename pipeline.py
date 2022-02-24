@@ -67,16 +67,22 @@ def load_pipeline(name):
     return pipeline
 
 
-def save_hyperparams(hyperparams, name):
-    filename = os.path.join(PIPELINES_DIR, f'{name}_hyperparams.json')
+def save_hyperparams(hyperparams, subject):
+    filename = os.path.join(PIPELINES_DIR, f'{subject}_hyperparams.json')
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(hyperparams, f, ensure_ascii=False, indent=4)
+
+
+def load_hyperparams(subject):
+    with open(os.path.join(PIPELINES_DIR, f'{subject}_hyperparams.json')) as file:
+        hyperparams = json.load(file)
+    return hyperparams
 
 
 def grid_search_pipeline_hyperparams(epochs, labels):
     pipeline = create_pipeline()
     gridsearch_params = {
-        "preprocessing__epoch_tmin": [0, 1],
+        "preprocessing__epoch_tmin": [0, 0.5, 1],
         "preprocessing__l_freq": [2, 5, 8],
         "preprocessing__h_freq": [24, 30],
         "feature_extraction__n_fft": [150, 200, 250],
@@ -86,9 +92,9 @@ def grid_search_pipeline_hyperparams(epochs, labels):
     }
     skf = RepeatedStratifiedKFold(n_splits=3, n_repeats=5)
     mne.set_log_level(verbose="WARNING")
-    gs = GridSearchCV(pipeline, gridsearch_params, cv=skf, n_jobs=-1, verbose=2)
+    gs = GridSearchCV(pipeline, gridsearch_params, cv=skf, n_jobs=-1, verbose=3, error_score='raise')
     mne.set_log_level(verbose="INFO")
-    gs.fit(epochs, labels)
+    gs.fit(epochs.get_data(), labels)
     print("Best parameter (CV score=%0.3f):" % gs.best_score_)
     print(gs.best_params_)
     return gs.best_params_

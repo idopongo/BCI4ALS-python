@@ -1,10 +1,10 @@
 {
     "feature_extraction__freq_bands": [
-        8,
+        5,
         12,
-        30
+        24
     ],
-    "feature_extraction__n_fft": 250,
+    "feature_extraction__n_fft": 300,
     "feature_extraction__n_overlap": 0.2,
     "feature_extraction__n_per_seg": 62,
     "preprocessing__epoch_tmin": 1,

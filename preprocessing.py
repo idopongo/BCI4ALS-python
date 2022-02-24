@@ -17,7 +17,7 @@ class Preprocessor:
         return self
 
     def transform(self, epochs):
-        epochs = mne.filter.filter_data(epochs, 125, self.l_freq, self.h_freq)
+        epochs = mne.filter.filter_data(epochs, 125, self.l_freq, self.h_freq, verbose=False)
         epochs = epochs[:, :, int(125 * self.epoch_tmin):]
         return epochs
 

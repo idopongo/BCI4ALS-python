@@ -1,4 +1,3 @@
-from psychopy import visual, core, event
 import numpy as np
 import os
 from datetime import datetime
@@ -49,6 +48,8 @@ def load_rec_params():
 
 
 def run_session(params, pipeline=None):
+    from psychopy import visual, core, event
+
     """
     Run a recording session, if pipeline is passed display prediction after every epoch
     """
