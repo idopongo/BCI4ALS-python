@@ -1,4 +1,4 @@
-# from psychopy import visual, core, event
+from psychopy import visual, core, event
 import numpy as np
 import os
 from datetime import datetime
