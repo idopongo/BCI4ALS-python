@@ -11,7 +11,7 @@ from preprocessing import preprocess
 from pipeline import get_subject_rec_folders
 
 
-def save_plots(rec_folder_name, bad_electrodes=[]):
+def create_and_save_plots(rec_folder_name, bad_electrodes=[]):
     raw, rec_params = load_raw(rec_folder_name)
     raw = preprocess(raw)
     raw.info['bads'] = bad_electrodes
@@ -64,7 +64,7 @@ def load_raw(rec_folder_name):
 def calc_class_spectrogram(raw, trial_duration, cls_marker, chan, time_before_stim):
     cls_epochs = mne.Epochs(raw, mne.find_events(raw), cls_marker, tmin=-time_before_stim, tmax=trial_duration,
                             picks=[chan])
-    cls_epochs = cls_epochs.get_data().squeeze()
+    cls_epochs = cls_epochs.get_data().squeeze(axis=1)
 
     sfreq = raw.info['sfreq']
     segments_per_second = 2
@@ -77,9 +77,9 @@ def calc_class_spectrogram(raw, trial_duration, cls_marker, chan, time_before_st
 
     # we calculate the power for the first epoch separately so that we have a variable of the right dimensions to sum
     # onto
-    _, _, avg_power = signal.spectrogram(cls_epochs[0], sfreq, **fft_params)
+    freq, time, avg_power = signal.spectrogram(cls_epochs[0], sfreq, **fft_params)
     for epoch in cls_epochs[1:]:
-        freq, time, power = signal.spectrogram(epoch, sfreq, **fft_params)
+        _, _, power = signal.spectrogram(epoch, sfreq, **fft_params)
         avg_power += power / len(cls_epochs)
 
     freq_range = (2, 40)
@@ -91,14 +91,14 @@ def calc_class_spectrogram(raw, trial_duration, cls_marker, chan, time_before_st
 
 def calc_class_psd(raw, trial_duration, cls_marker, chan):
     cls_epochs = mne.Epochs(raw, mne.find_events(raw), cls_marker, tmax=trial_duration, picks=[chan])
-    cls_epochs = cls_epochs.get_data().squeeze()
+    cls_epochs = cls_epochs.get_data().squeeze(axis=1)
     sfreq = raw.info['sfreq']
 
     # calculate the first fft
-    _, avg_power = signal.welch(cls_epochs[0], sfreq, scaling="density")
+    freq, avg_power = signal.welch(cls_epochs[0], sfreq, scaling="density")
 
     for epoch in cls_epochs[1:]:
-        freq, power = signal.welch(epoch, sfreq, scaling="density")
+        _, power = signal.welch(epoch, sfreq, scaling="density")
         avg_power += power / len(cls_epochs)
 
     freq_range = (7, 30)
@@ -144,8 +144,8 @@ def create_class_spectrogram_fig(raw, trial_duration, electrodes):
 
 def save_plots_for_subject(subject_name):
     rec_folders = get_subject_rec_folders(subject_name)
-    [save_plots(folder) for folder in rec_folders]
+    [create_and_save_plots(folder) for folder in rec_folders]
 
 
 if __name__ == "__main__":
-    save_plots_for_subject("David3")
+    save_plots_for_subject("Synthetic")

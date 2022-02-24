@@ -1,0 +1,7 @@
+{
+    "subject": "Syn",
+    "trial_duration": 3,
+    "trials_per_stim": 1,
+    "get_ready_duration": 1,
+    "calibration_duration": 1
+}
