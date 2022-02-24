@@ -85,8 +85,9 @@ def grid_search_pipeline_hyperparams(epochs, labels):
         "feature_extraction__freq_bands": [[8, 12, 30], [8, 12, 20, 30]],
     }
     skf = RepeatedStratifiedKFold(n_splits=3, n_repeats=5)
-
-    gs = GridSearchCV(pipeline, gridsearch_params, cv=skf, n_jobs=-1)
+    mne.set_log_level(verbose="WARNING")
+    gs = GridSearchCV(pipeline, gridsearch_params, cv=skf, n_jobs=-1, verbose=2)
+    mne.set_log_level(verbose="INFO")
     gs.fit(epochs, labels)
     print("Best parameter (CV score=%0.3f):" % gs.best_score_)
     print(gs.best_params_)
@@ -97,8 +98,8 @@ def get_epochs(raw, trial_duration, markers=Marker.all()):
     events = mne.find_events(raw)
     epochs = mne.Epochs(raw, events, markers, tmin=-1, tmax=trial_duration, picks="data", baseline=(-1, 0))
 
-    # running get data triggers dropping of epochs, we want to make sure this happens now so that the labels are consistent with
-    # the epochs
+    # running get data triggers dropping of epochs, we want to make sure this happens now so that the labels are
+    # consistent with the epochs
     epochs.get_data()
 
     labels = epochs.events[:, -1]
@@ -108,11 +109,11 @@ def get_epochs(raw, trial_duration, markers=Marker.all()):
 def load_recordings(subj):
     subj_recs = get_subject_rec_folders(subj)
     raws = [mne.io.read_raw_fif(os.path.join(RECORDINGS_DIR, rec, 'raw.fif')) for rec in subj_recs]
+    # When multiple recordings are loaded, the recording_params.json is taken from the first recording
     with open(os.path.join(RECORDINGS_DIR, subj_recs[0], 'params.json')) as file:
-        params = json.load(file)
+        rec_params = json.load(file)
     all_raw = mne.io.concatenate_raws(raws)
-    print(subj_recs)
-    return all_raw, params
+    return all_raw, rec_params
 
 
 def get_subject_rec_folders(subj):

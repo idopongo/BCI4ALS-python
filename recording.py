@@ -8,18 +8,25 @@ from constants import *
 from board import Board
 import json
 from pipeline import get_epochs
+from figures import create_and_save_plots
 
 BG_COLOR = "black"
 STIM_COLOR = "white"
 SYNTHETIC_SUBJECT_NAME = "Synthetic"
 
 
-def save_raw(raw, params):
-    subject = params["subject"] if not params["use_synthetic_board"] else SYNTHETIC_SUBJECT_NAME
-    folder_path = create_session_folder(subject)
+def record_data(rec_params, pipeline=None):
+    raw = run_session(rec_params, pipeline)
+    folder_path = save_raw(raw, rec_params)
+    create_and_save_plots(os.path.basename(folder_path))
+    return raw
+
+
+def save_raw(raw, rec_params):
+    folder_path = create_session_folder(rec_params['subject_name'])
     raw.save(os.path.join(folder_path, "raw.fif"))
     with open(os.path.join(folder_path, "params.json"), 'w', encoding='utf-8') as f:
-        json.dump(params, f, ensure_ascii=False, indent=4)
+        json.dump(rec_params, f, ensure_ascii=False, indent=4)
     return os.path.basename(folder_path)
 
 
@@ -33,8 +40,12 @@ def create_session_folder(subj):
 
 def load_rec_params():
     with open(RECORDING_PARAMS_PATH) as file:
-        params = json.load(file)
-    return params
+        rec_params = json.load(file)
+
+    if rec_params["use_synthetic_board"]:
+        rec_params["subject"] = SYNTHETIC_SUBJECT_NAME
+
+    return rec_params
 
 
 def run_session(params, pipeline=None):
@@ -47,7 +58,7 @@ def run_session(params, pipeline=None):
 
     # open psychopy window and display starting message
     win = visual.Window(units="norm", color=BG_COLOR, fullscr=params["full_screen"])
-    msg1 = "Hit any key to start, press Esc at any point to exit"
+    msg1 = f'Hello {rec_params["subject"]}!\n Hit any key to start, press Esc at any point to exit'
     loop_through_messages(win, [msg1])
 
     # start recording
@@ -134,4 +145,5 @@ def marker_image(win, marker):
 
 
 if __name__ == "__main__":
-    main()
+    rec_params = load_rec_params()
+    record_data(rec_params)
