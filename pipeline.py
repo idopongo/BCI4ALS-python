@@ -4,7 +4,6 @@ import os
 import json
 from preprocessing import Preprocessor
 from features import FeatureExtractor
-from classifier import create_classifier
 import scipy.io
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.model_selection import RepeatedStratifiedKFold, cross_val_score
