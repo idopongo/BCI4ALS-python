@@ -14,14 +14,37 @@ def health_check():
         plt.ion()
         ax = create_figure(len(board.eeg_channels))
         chan_plots = plot_chans(board.channel_names, window_size, ax)
-        montage_plot, chan_error_texts = plot_montage(board.channel_names, ax["right"])
+        montage_plot, chan_error_texts = plot_montage(board.channel_names, ax["upright"])
+        psd_plots = plot_psd(ax["downright"], board.channel_names)
         while True:
             data = get_next_data(board, window_size)
+            fs = board.sfreq
             errors_by_chan = check_chan_health(data)
             update_chan_plots(chan_plots, data, window_size)
-            update_montage_plot(ax, montage_plot, errors_by_chan, chan_error_texts)
+            update_montage_plot(montage_plot, errors_by_chan, chan_error_texts)
+            update_psd_plot(psd_plots, data, fs)
             plt.draw()
             plt.pause(1e-3)
+
+
+def plot_psd(ax, chan_names):
+    chan_lines = []
+    t = np.zeros(0)
+    v = np.zeros(0)
+    for i in range(len(chan_names)):
+        chan_lines.append(ax.plot(t, v)[0])
+        ax.set_ylabel('Power')
+        ax.set_xlabel('Frequency [Hz]')
+        ax.grid(True)
+        ax.set_ylim(0, 7000)
+        ax.set_xlim(0, 80)
+    return chan_lines
+
+
+def update_psd_plot(psd_plots, data, sfreq):
+    for plot, chan in zip(psd_plots, data):
+        freq, power = scipy.signal.welch(chan, sfreq, nperseg=sfreq, scaling="density")
+        plot.set_data(freq, power)
 
 
 def on_press(event):
@@ -30,7 +53,9 @@ def on_press(event):
 
 
 def create_figure(num_chans):
-    fig, ax = plt.subplot_mosaic([[i, "right"] for i in range(num_chans)])
+    scale_num = 2 / 3
+    fig, ax = plt.subplot_mosaic(
+        [[i, "upright"] if 0 <= i < scale_num * num_chans else [i, "downright"] for i in range(num_chans)])
     fig.subplots_adjust(left=0.1)
     fig.canvas.mpl_connect('key_press_event', on_press)
     return ax
@@ -58,23 +83,24 @@ def update_chan_plots(chan_plots, data, window_size):
 
 
 def plot_montage(ch_names, ax):
+    scale_num = 2 / 3
     # Get channel positions from standard_1020 montage
     montage = mne.channels.make_standard_montage('standard_1020')
-    ch_pos = {key: value for key, value in montage.get_positions()["ch_pos"].items() if key in ch_names}
-    x = [pos[0] for pos in ch_pos.values()]
-    y = [pos[1] for pos in ch_pos.values()]
+    ch_pos = {key: value * scale_num for key, value in montage.get_positions()["ch_pos"].items() if key in ch_names}
+    x = [scale_num * pos[0] for pos in ch_pos.values()]
+    y = [scale_num * pos[1] for pos in ch_pos.values()]
     ax.axis('off')
     montage_plot = ax.scatter(x, y, 600, "white", edgecolor="black")
     chan_error_texts = []
     for ch_name, pos in ch_pos.items():
-        ax.text(pos[0], pos[1], ch_name, ha="center", va="center")
-        chan_error_texts.append(ax.text(pos[0], pos[1] - 0.01, "errors: ", ha="center", va="center"))
+        ax.text(scale_num * pos[0], scale_num * pos[1], ch_name, ha="center", va="center")
+        chan_error_texts.append(ax.text(scale_num * pos[0], scale_num * pos[1], "errors: ", ha="center", va="center"))
         ax.set_xticks([])
         ax.set_yticks([])
     return montage_plot, chan_error_texts
 
 
-def update_montage_plot(ax, montage_plot, errors_by_chan, chan_error_texts):
+def update_montage_plot(montage_plot, errors_by_chan, chan_error_texts):
     colors = ["red" if len(errors) else "black" for errors in errors_by_chan.values()]
     montage_plot.set_edgecolor(colors)
 
