@@ -45,22 +45,37 @@ def preprocess(raw):
     raw.filter(7, 30)
     return raw
 
+
 def reject_epochs(epochs, labels):
     rejected_max_val = 300 * 1e-6
     rejected_min_val = 5 * 1e-6
     epochs = epochs.get_data()  # array of shape (n_epochs, n_channels, n_times)
 
-    bad_epoch = []
+    bad_epochs = dict()
     for epoch_idx, epoch in enumerate(epochs):
-        bad_chan = []
+        reasons = {
+            'bad_chans': [],
+            'reason': []
+        }
         for i in range(len(epoch[:, 1])):
             curr_chan = epoch[i, :]
             if abs(curr_chan.min()) < rejected_min_val:
-                bad_chan.append(i)
+                reasons['bad_chans'].append(i)
+                reasons['reason'].append('too low')
             elif abs(curr_chan.max()) > rejected_max_val:
-                bad_chan.append(i)
+                reasons['bad_chans'].append(i)
+                reasons['reason'].append('too high')
 
-        if len(bad_chan) > 2:
-            bad_epoch.append(epoch_idx)
+        if len(reasons['bad_chans']) > 2:
+            bad_epochs[epoch_idx] = reasons
 
-    return np.delete(epochs, bad_epoch, axis=0), np.delete(labels, bad_epoch, axis=0)
+    print(f"{len(bad_epochs.keys())} epochs removed")
+    print(bad_epochs)
+    return np.delete(epochs, list(bad_epochs.keys()), axis=0), np.delete(labels, list(bad_epochs.keys()), axis=0)
+
+
+def find_average_voltage(epochs):
+    vol_per_chan = {}
+    for chan_inx in range(len(epochs[0, :, 0])):
+        vol_per_chan[chan_inx + 1] = np.mean(epochs[:, chan_inx, :])
+    return vol_per_chan
