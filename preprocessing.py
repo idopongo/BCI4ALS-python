@@ -3,15 +3,6 @@ import numpy as np
 
 from board import EEG_CHAN_NAMES
 
-LAPLACIAN = {
-    "C3": ["FC5", "FC1", "CP5", "CP1"],
-    "Cz": ["FC1", "FC2", "CP1", "CP2"],
-    "C4": ["FC2", "FC6", "CP2", "CP6"]
-}
-
-LAPLACIAN = {EEG_CHAN_NAMES.index(key): [EEG_CHAN_NAMES.index(chan) for chan in value] for key, value in
-             LAPLACIAN.items()}
-
 
 class Preprocessor:
     def __init__(self):
@@ -28,15 +19,28 @@ class Preprocessor:
         return self
 
     def transform(self, epochs):
-        laplacian(epochs)
+        epochs = self.laplacian(epochs)
         epochs = mne.filter.filter_data(epochs, 125, self.l_freq, self.h_freq, verbose=False)
         epochs = epochs[:, :, int(125 * self.epoch_tmin):]
         return epochs
 
-
-def laplacian(epochs):
-    for chan, adjacent_chans in LAPLACIAN.items():
-        epochs[:, chan, :] -= np.mean(epochs[:, adjacent_chans, :], axis=1)
+    def laplacian(self, epochs):
+        LAPLACIAN = {
+            "C3": ["FC5", "FC1", "CP5", "CP1"],
+            "Cz": ["FC1", "FC2", "CP1", "CP2"],
+            "C4": ["FC2", "FC6", "CP2", "CP6"]
+        }
+        LAPLACIAN = {EEG_CHAN_NAMES.index(key): [EEG_CHAN_NAMES.index(chan) for chan in value] for key, value in
+                     LAPLACIAN.items()}
+        filtered_epochs = np.copy(epochs)
+        for chan, adjacent_chans in LAPLACIAN.items():
+            print(chan)
+            print(adjacent_chans)
+            try:
+                filtered_epochs[:, chan, :] -= np.mean(epochs[:, adjacent_chans, :], axis=1)
+            except:
+                print()
+        return filtered_epochs
 
 
 def preprocess(raw):
