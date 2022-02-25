@@ -1,16 +1,17 @@
 from board import Board
 import matplotlib.pyplot as plt
-import matplotlib.mlab as mlab
 import numpy as np
 import scipy.signal
 from scipy import signal
 import scipy.stats
 import mne
+from recording import load_rec_params
 
 
 def health_check():
+    rec_params = load_rec_params()
     window_size = 2
-    with Board(use_synthetic=True) as board:
+    with Board(use_synthetic=rec_params["use_synthetic_board"]) as board:
         plt.ion()
         ax = create_figure(len(board.eeg_channels))
         chan_plots = plot_chans(board.channel_names, window_size, ax)
@@ -53,8 +54,9 @@ def on_press(event):
 
 
 def create_figure(num_chans):
-    scale_num = 2/3
-    fig, ax = plt.subplot_mosaic([[i, "upright"] if 0 <= i < scale_num * num_chans else [i, "downright"] for i in range(num_chans)])
+    scale_num = 2 / 3
+    fig, ax = plt.subplot_mosaic(
+        [[i, "upright"] if 0 <= i < scale_num * num_chans else [i, "downright"] for i in range(num_chans)])
     fig.subplots_adjust(left=0.1)
     fig.canvas.mpl_connect('key_press_event', on_press)
     return ax
@@ -82,18 +84,18 @@ def update_chan_plots(chan_plots, data, window_size):
 
 
 def plot_montage(ch_names, ax):
-    scale_num = 2/3
+    scale_num = 2 / 3
     # Get channel positions from standard_1020 montage
     montage = mne.channels.make_standard_montage('standard_1020')
-    ch_pos = {key: value*scale_num for key, value in montage.get_positions()["ch_pos"].items() if key in ch_names}
-    x = [scale_num*pos[0] for pos in ch_pos.values()]
-    y = [scale_num*pos[1] for pos in ch_pos.values()]
+    ch_pos = {key: value * scale_num for key, value in montage.get_positions()["ch_pos"].items() if key in ch_names}
+    x = [scale_num * pos[0] for pos in ch_pos.values()]
+    y = [scale_num * pos[1] for pos in ch_pos.values()]
     ax.axis('off')
     montage_plot = ax.scatter(x, y, 600, "white", edgecolor="black")
     chan_error_texts = []
     for ch_name, pos in ch_pos.items():
-        ax.text(scale_num*pos[0], scale_num*pos[1], ch_name, ha="center", va="center")
-        chan_error_texts.append(ax.text(scale_num*pos[0], scale_num*pos[1], "errors: ", ha="center", va="center"))
+        ax.text(scale_num * pos[0], scale_num * pos[1], ch_name, ha="center", va="center")
+        chan_error_texts.append(ax.text(scale_num * pos[0], scale_num * pos[1], "errors: ", ha="center", va="center"))
         ax.set_xticks([])
         ax.set_yticks([])
     return montage_plot, chan_error_texts

@@ -1,0 +1,81 @@
+import mne
+import numpy as np
+
+
+class Preprocessor:
+    def __init__(self):
+        self.epoch_tmin = 1
+        self.l_freq = 7
+        self.h_freq = 30
+
+    def set_params(self, epoch_tmin, l_freq, h_freq):
+        self.epoch_tmin = epoch_tmin
+        self.l_freq = l_freq
+        self.h_freq = h_freq
+
+    def fit(self, data, labels):
+        return self
+
+    def transform(self, epochs):
+        epochs = mne.filter.filter_data(epochs, 125, self.l_freq, self.h_freq, verbose=False)
+        epochs = epochs[:, :, int(125 * self.epoch_tmin):]
+        return epochs
+
+
+def laplacian(raw):
+    def laplacian_C3(chan):
+        avg = (raw["FC5"][0] + raw["FC1"][0] + raw["CP5"][0] + raw["CP1"][0]) / 4
+        return chan - avg.squeeze()
+
+    def laplacian_C4(chan):
+        avg = (raw["FC2"][0] + raw["FC6"][0] + raw["CP2"][0] + raw["CP6"][0]) / 4
+        return chan - avg.squeeze()
+
+    def laplacian_Cz(chan):
+        avg = (raw["FC1"][0] + raw["FC2"][0] + raw["CP1"][0] + raw["CP2"][0]) / 4
+        return chan - avg.squeeze()
+
+    raw.apply_function(laplacian_C3, picks=["C3"])
+    raw.apply_function(laplacian_C4, picks=["C4"])
+    raw.apply_function(laplacian_Cz, picks=["Cz"])
+
+
+def preprocess(raw):
+    raw.load_data()
+    raw.filter(7, 30)
+    return raw
+
+
+def reject_epochs(epochs, labels):
+    rejected_max_val = 300 * 1e-6
+    rejected_min_val = 5 * 1e-6
+
+    bad_epochs = dict()
+    for epoch_idx, epoch in enumerate(epochs):
+        reasons = {
+            'bad_chans': [],
+            'reason': []
+        }
+        for i in range(len(epoch[:, 1])):
+            curr_chan = epoch[i, :]
+            if abs(curr_chan.min()) < rejected_min_val:
+                reasons['bad_chans'].append(i)
+                reasons['reason'].append('too low')
+            elif abs(curr_chan.max()) > rejected_max_val:
+                reasons['bad_chans'].append(i)
+                reasons['reason'].append('too high')
+
+        if len(reasons['bad_chans']) > 2:
+            bad_epochs[epoch_idx] = reasons
+
+    print(f"{len(bad_epochs.keys())} epochs removed")
+    print(bad_epochs)
+    return np.delete(epochs, list(bad_epochs.keys()), axis=0), np.delete(labels, list(bad_epochs.keys()), axis=0)
+
+
+def find_average_voltage(epochs):
+    vol_per_chan = {}
+    for chan_inx in range(len(epochs[0, :, 0])):
+        vol_per_chan[chan_inx + 1] = np.mean(epochs[:, chan_inx, :])
+    print(vol_per_chan)
+    return vol_per_chan
