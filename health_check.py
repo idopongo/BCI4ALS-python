@@ -15,35 +15,36 @@ def health_check():
         ax = create_figure(len(board.eeg_channels))
         chan_plots = plot_chans(board.channel_names, window_size, ax)
         montage_plot, chan_error_texts = plot_montage(board.channel_names, ax["upright"])
-        psd_plot = plot_psd(ax["downright"])
+        psd_plots = plot_psd(ax["downright"], board.channel_names)
         while True:
             data = get_next_data(board, window_size)
             fs = board.sfreq
             errors_by_chan = check_chan_health(data)
             update_chan_plots(chan_plots, data, window_size)
-            update_montage_plot(ax, montage_plot, errors_by_chan, chan_error_texts)
-            update_psd_plot(ax["downright"], psd_plot, data, fs)
+            update_montage_plot(montage_plot, errors_by_chan, chan_error_texts)
+            update_psd_plot(psd_plots, data, fs)
             plt.draw()
             plt.pause(1e-3)
 
 
-def plot_psd(ax):
-    ax.set_ylabel('Power')
-    ax.set_xlabel('Frequency [Hz]')
-    ax.set_title(f'power spectrum')
-    ax.grid(True)
-    return ax
+def plot_psd(ax, chan_names):
+    chan_lines = []
+    t = np.zeros(0)
+    v = np.zeros(0)
+    for i in range(len(chan_names)):
+        chan_lines.append(ax.plot(t, v)[0])
+        ax.set_ylabel('Power')
+        ax.set_xlabel('Frequency [Hz]')
+        ax.grid(True)
+        ax.set_ylim(0, 7000)
+        ax.set_xlim(0, 80)
+    return chan_lines
 
 
-def update_psd_plot(ax, psd_plot, data, sfreq):
-    # psd_plot.figure(clear=True)
-    for i in range(len(data)):
-        freq, power = signal.welch(data[i], sfreq, scaling="density")
-        ax.plot(freq, power)
-        ax.psd(data[i], Fs=sfreq, scale_by_freq=True)
-
-    # ax.psd(data[0], Fs=sfreq, scale_by_freq=True)
-
+def update_psd_plot(psd_plots, data, sfreq):
+    for plot, chan in zip(psd_plots, data):
+        freq, power = signal.welch(chan, sfreq, nperseg=sfreq, scaling="density")
+        plot.set_data(freq, power)
 
 
 def on_press(event):
@@ -98,7 +99,7 @@ def plot_montage(ch_names, ax):
     return montage_plot, chan_error_texts
 
 
-def update_montage_plot(ax, montage_plot, errors_by_chan, chan_error_texts):
+def update_montage_plot(montage_plot, errors_by_chan, chan_error_texts):
     colors = ["red" if len(errors) else "black" for errors in errors_by_chan.values()]
     montage_plot.set_edgecolor(colors)
 
