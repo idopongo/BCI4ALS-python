@@ -5,6 +5,7 @@ import scipy.signal
 import scipy.stats
 import mne
 from recording import load_rec_params
+import math
 
 
 def health_check():
@@ -36,15 +37,15 @@ def plot_psd(ax, chan_names):
         ax.set_ylabel('Power')
         ax.set_xlabel('Frequency [Hz]')
         ax.grid(True)
-        ax.set_ylim(0, 7000)
-        ax.set_xlim(0, 80)
+        ax.set_ylim(-40, 80)
+        ax.set_xlim(0, 60)
     return chan_lines
 
 
 def update_psd_plot(psd_plots, data, sfreq):
     for plot, chan in zip(psd_plots, data):
         freq, power = scipy.signal.welch(chan, sfreq, nperseg=sfreq, scaling="density")
-        plot.set_data(freq, power)
+        plot.set_data(freq, 10*np.log10(power))
 
 
 def on_press(event):

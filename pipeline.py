@@ -146,5 +146,5 @@ def matlab_data_pipeline():
 
 
 if __name__ == "__main__":
-    raw, params = load_recordings("Synthetic")
+    raw, params = load_recordings("Avigail")
     create_and_fit_pipeline(raw, params)

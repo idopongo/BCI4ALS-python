@@ -20,6 +20,7 @@ def create_pipeline_for_subject(subject):
     hyperparams = load_hyperparams(subject)
     pipeline, epochs, labels = create_and_fit_pipeline(raw, rec_params, hyperparams=hyperparams)
     evaluate_pipeline(pipeline, epochs, labels)
+    return pipeline
 
 
 def find_best_hyperparams_for_subject(subject):
@@ -30,5 +31,7 @@ def find_best_hyperparams_for_subject(subject):
 
 
 if __name__ == "__main__":
+    rec_params = load_rec_params()
     # find_best_hyperparams_for_subject("Haggai2")
-    create_pipeline_for_subject("Ido2")
+    pipeline = create_pipeline_for_subject("Avigail2")
+    # record_data(rec_params, pipeline)
