@@ -40,8 +40,7 @@ def create_and_fit_pipeline(raw, recording_params, hyperparams=DEFAULT_HYPERPARA
     # get data, epochs
     epochs, labels = get_epochs(raw, recording_params["trial_duration"])
     epochs, labels = reject_epochs(epochs, labels)
-
-    vol_per_chan = find_average_voltage(epochs)
+    find_average_voltage(epochs)
     # create a pipeline from params
     pipeline = create_pipeline(hyperparams)
     pipeline.fit(epochs, labels)
@@ -68,16 +67,22 @@ def load_pipeline(name):
     return pipeline
 
 
-def save_hyperparams(hyperparams, name):
-    filename = os.path.join(PIPELINES_DIR, f'{name}_hyperparams.json')
+def save_hyperparams(hyperparams, subject):
+    filename = os.path.join(PIPELINES_DIR, f'{subject}_hyperparams.json')
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(hyperparams, f, ensure_ascii=False, indent=4)
+
+
+def load_hyperparams(subject):
+    with open(os.path.join(PIPELINES_DIR, f'{subject}_hyperparams.json')) as file:
+        hyperparams = json.load(file)
+    return hyperparams
 
 
 def grid_search_pipeline_hyperparams(epochs, labels):
     pipeline = create_pipeline()
     gridsearch_params = {
-        "preprocessing__epoch_tmin": [0, 1],
+        "preprocessing__epoch_tmin": [0, 0.5, 1],
         "preprocessing__l_freq": [2, 5, 8],
         "preprocessing__h_freq": [24, 30],
         "feature_extraction__n_fft": [150, 200, 250],
@@ -87,7 +92,7 @@ def grid_search_pipeline_hyperparams(epochs, labels):
     }
     skf = RepeatedStratifiedKFold(n_splits=3, n_repeats=5)
     mne.set_log_level(verbose="WARNING")
-    gs = GridSearchCV(pipeline, gridsearch_params, cv=skf, n_jobs=-1, verbose=2)
+    gs = GridSearchCV(pipeline, gridsearch_params, cv=skf, n_jobs=-1, verbose=10)
     mne.set_log_level(verbose="INFO")
     gs.fit(epochs, labels)
     print("Best parameter (CV score=%0.3f):" % gs.best_score_)

@@ -17,7 +17,7 @@ class Preprocessor:
         return self
 
     def transform(self, epochs):
-        epochs = mne.filter.filter_data(epochs, 125, self.l_freq, self.h_freq)
+        epochs = mne.filter.filter_data(epochs, 125, self.l_freq, self.h_freq, verbose=False)
         epochs = epochs[:, :, int(125 * self.epoch_tmin):]
         return epochs
 
@@ -49,7 +49,6 @@ def preprocess(raw):
 def reject_epochs(epochs, labels):
     rejected_max_val = 300 * 1e-6
     rejected_min_val = 5 * 1e-6
-    epochs = epochs.get_data()  # array of shape (n_epochs, n_channels, n_times)
 
     bad_epochs = dict()
     for epoch_idx, epoch in enumerate(epochs):
@@ -78,4 +77,5 @@ def find_average_voltage(epochs):
     vol_per_chan = {}
     for chan_inx in range(len(epochs[0, :, 0])):
         vol_per_chan[chan_inx + 1] = np.mean(epochs[:, chan_inx, :])
+    print(vol_per_chan)
     return vol_per_chan

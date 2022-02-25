@@ -1,6 +1,6 @@
 from recording import record_data, load_rec_params
 from pipeline import create_and_fit_pipeline, evaluate_pipeline, load_recordings, get_epochs, \
-    grid_search_pipeline_hyperparams, save_hyperparams
+    grid_search_pipeline_hyperparams, save_hyperparams, load_hyperparams
 
 
 def record_and_create_pipeline(rec_params):
@@ -17,7 +17,8 @@ def record_create_pipeline_to_online(rec_params):
 
 def create_pipeline_for_subject(subject):
     raw, rec_params = load_recordings(subject)
-    pipeline, epochs, labels = create_and_fit_pipeline(raw, rec_params)
+    hyperparams = load_hyperparams(subject)
+    pipeline, epochs, labels = create_and_fit_pipeline(raw, rec_params, hyperparams=hyperparams)
     evaluate_pipeline(pipeline, epochs, labels)
 
 
