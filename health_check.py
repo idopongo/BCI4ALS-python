@@ -2,7 +2,6 @@ from board import Board
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal
-from scipy import signal
 import scipy.stats
 import mne
 from recording import load_rec_params
@@ -44,7 +43,7 @@ def plot_psd(ax, chan_names):
 
 def update_psd_plot(psd_plots, data, sfreq):
     for plot, chan in zip(psd_plots, data):
-        freq, power = signal.welch(chan, sfreq, nperseg=sfreq, scaling="density")
+        freq, power = scipy.signal.welch(chan, sfreq, nperseg=sfreq, scaling="density")
         plot.set_data(freq, power)
 
 
