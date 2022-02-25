@@ -40,9 +40,8 @@ def create_and_fit_pipeline(raw, recording_params, hyperparams=DEFAULT_HYPERPARA
     # get data, epochs
     epochs, labels = get_epochs(raw, recording_params["trial_duration"])
     epochs, labels = reject_epochs(epochs, labels)
-    find_average_voltage(epochs)
     # create a pipeline from params
-    pipeline = create_pipeline(hyperparams)
+    pipeline = create_csp_pipeline(hyperparams)
     pipeline.fit(epochs, labels)
     return pipeline, epochs, labels
 
@@ -50,6 +49,16 @@ def create_and_fit_pipeline(raw, recording_params, hyperparams=DEFAULT_HYPERPARA
 def create_pipeline(hyperparams=DEFAULT_HYPERPARAMS):
     lda = LinearDiscriminantAnalysis()
     pipeline = Pipeline([('preprocessing', Preprocessor()), ('feature_extraction', FeatureExtractor()), ('lda', lda)])
+    hyperparams = {key: hyperparams[key] for key in hyperparams if key.split("__")[0] in pipeline.get_params().keys()}
+    pipeline.set_params(**hyperparams)
+    return pipeline
+
+
+def create_csp_pipeline(hyperparams=DEFAULT_HYPERPARAMS):
+    lda = LinearDiscriminantAnalysis()
+    csp = mne.decoding.CSP()
+    pipeline = Pipeline([('preprocessing', Preprocessor()), ('CSP', csp), ('lda', lda)])
+    hyperparams = {key: hyperparams[key] for key in hyperparams if key.split("__")[0] in pipeline.get_params().keys()}
     pipeline.set_params(**hyperparams)
     return pipeline
 
@@ -80,19 +89,16 @@ def load_hyperparams(subject):
 
 
 def grid_search_pipeline_hyperparams(epochs, labels):
-    pipeline = create_pipeline()
+    pipeline = create_csp_pipeline()
     gridsearch_params = {
         "preprocessing__epoch_tmin": [0, 0.5, 1],
         "preprocessing__l_freq": [2, 5, 8],
         "preprocessing__h_freq": [24, 30],
-        "feature_extraction__n_fft": [150, 200, 250],
-        "feature_extraction__n_per_seg": [31, 62, 125],
-        "feature_extraction__n_overlap": [0.2, 0.3, 0.4],
-        "feature_extraction__freq_bands": [[8, 12, 30], [8, 12, 20, 30]],
+        "CSP__n_components": [4, 5, 6, 7, 8, 9, 10]
     }
     skf = RepeatedStratifiedKFold(n_splits=3, n_repeats=5)
     mne.set_log_level(verbose="WARNING")
-    gs = GridSearchCV(pipeline, gridsearch_params, cv=skf, n_jobs=-1, verbose=10)
+    gs = GridSearchCV(pipeline, gridsearch_params, cv=skf, n_jobs=-1, verbose=10, error_score="raise")
     mne.set_log_level(verbose="INFO")
     gs.fit(epochs, labels)
     print("Best parameter (CV score=%0.3f):" % gs.best_score_)

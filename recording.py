@@ -8,7 +8,8 @@ from board import Board
 import json
 from pipeline import get_epochs
 from figures import create_and_save_plots
-from psychopy import visual, core, event
+
+# from psychopy import visual, core, event
 
 BG_COLOR = "black"
 STIM_COLOR = "white"
