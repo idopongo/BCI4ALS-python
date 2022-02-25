@@ -84,7 +84,7 @@ def run_session(params, pipeline=None):
                 raw = board.get_data()
                 print(len(raw))
                 epochs, _ = get_epochs(raw, params["trial_duration"], markers=marker)
-                prediction = pipeline.predict(epochs.get_data())[-1]
+                prediction = pipeline.predict(epochs)[-1]
 
                 # display prediction result
                 txt = classification_result_txt(win, marker, prediction)

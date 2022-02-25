@@ -31,7 +31,7 @@ DEFAULT_HYPERPARAMS = {
 
 def evaluate_pipeline(pipeline, epochs, labels):
     skf = RepeatedStratifiedKFold(n_splits=4, n_repeats=10)
-    scores = cross_val_score(pipeline, epochs.get_data(), labels, cv=skf)
+    scores = cross_val_score(pipeline, epochs, labels, cv=skf)
     print(
         f'features classifier accuracy: \n mean: {np.round(np.mean(scores), 2)} \n std: {np.round(np.std(scores), 3)}')
 
@@ -40,11 +40,10 @@ def create_and_fit_pipeline(raw, recording_params, hyperparams=DEFAULT_HYPERPARA
     # get data, epochs
     epochs, labels = get_epochs(raw, recording_params["trial_duration"])
     epochs, labels = reject_epochs(epochs, labels)
-
-    vol_per_chan = find_average_voltage(epochs)
+    find_average_voltage(epochs)
     # create a pipeline from params
     pipeline = create_pipeline(hyperparams)
-    pipeline.fit(epochs.get_data(), labels)
+    pipeline.fit(epochs, labels)
     return pipeline, epochs, labels
 
 
@@ -95,7 +94,7 @@ def grid_search_pipeline_hyperparams(epochs, labels):
     mne.set_log_level(verbose="WARNING")
     gs = GridSearchCV(pipeline, gridsearch_params, cv=skf, n_jobs=-1, verbose=10)
     mne.set_log_level(verbose="INFO")
-    gs.fit(epochs.get_data(), labels)
+    gs.fit(epochs, labels)
     print("Best parameter (CV score=%0.3f):" % gs.best_score_)
     print(gs.best_params_)
     return gs.best_params_
