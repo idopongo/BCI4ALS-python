@@ -8,6 +8,7 @@ from board import Board
 import json
 from pipeline import get_epochs
 from figures import create_and_save_plots
+from psychopy import visual, core, event
 
 BG_COLOR = "black"
 STIM_COLOR = "white"
@@ -48,8 +49,6 @@ def load_rec_params():
 
 
 def run_session(params, pipeline=None):
-    from psychopy import visual, core, event
-
     """
     Run a recording session, if pipeline is passed display prediction after every epoch
     """
