@@ -38,7 +38,8 @@ def evaluate_pipeline(pipeline, epochs, labels):
 
 def create_and_fit_pipeline(raw, recording_params, hyperparams=DEFAULT_HYPERPARAMS):
     # get data, epochs
-    epochs, labels = get_epochs(raw, recording_params["trial_duration"])
+    epochs, labels = get_epochs(raw, recording_params["trial_duration"],
+                                reject_bad=not recording_params['use_synthetic_board'])
     # create a pipeline from params
     pipeline = create_csp_pipeline(hyperparams)
     pipeline.fit(epochs, labels)
@@ -105,7 +106,7 @@ def grid_search_pipeline_hyperparams(epochs, labels):
     return gs.best_params_
 
 
-def get_epochs(raw, trial_duration, markers=Marker.all()):
+def get_epochs(raw, trial_duration, markers=Marker.all(), reject_bad=False):
     events = mne.find_events(raw)
     epochs = mne.Epochs(raw, events, markers, tmin=-1, tmax=trial_duration, picks="data", baseline=(-1, 0))
 
@@ -114,7 +115,8 @@ def get_epochs(raw, trial_duration, markers=Marker.all()):
     epochs_data = epochs.get_data()
     labels = epochs.events[:, -1]
 
-    epochs_data, labels = reject_epochs(epochs_data, labels)
+    if reject_bad:
+        epochs_data, labels = reject_epochs(epochs_data, labels)
 
     return epochs_data, labels
 
@@ -122,6 +124,7 @@ def get_epochs(raw, trial_duration, markers=Marker.all()):
 def load_recordings(subj):
     subj_recs = get_subject_rec_folders(subj)
     raws = [mne.io.read_raw_fif(os.path.join(RECORDINGS_DIR, rec, 'raw.fif')) for rec in subj_recs]
+
     # When multiple recordings are loaded, the recording_params.json is taken from the first recording
     with open(os.path.join(RECORDINGS_DIR, subj_recs[0], 'params.json')) as file:
         rec_params = json.load(file)

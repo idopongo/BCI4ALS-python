@@ -19,7 +19,6 @@ SYNTHETIC_SUBJECT_NAME = "Synthetic"
 def record_data(rec_params, pipeline=None):
     raw = run_session(rec_params, pipeline)
     folder_path = save_raw(raw, rec_params)
-    create_and_save_plots(os.path.basename(folder_path))
     return raw
 
 
@@ -90,7 +89,7 @@ def run_session(params, pipeline=None):
                 # display prediction result
                 txt = classification_result_txt(win, marker, prediction)
                 show_stim_for_duration(win, txt, params["display_online_result_duration"])
-        core.wait(0.1)
+        core.wait(0.5)
         win.close()
         return board.get_data()
 

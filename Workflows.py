@@ -25,7 +25,7 @@ def create_pipeline_for_subject(subject):
 
 def find_best_hyperparams_for_subject(subject):
     raw, rec_params = load_recordings(subject)
-    epochs, labels = get_epochs(raw, rec_params['trial_duration'])
+    epochs, labels = get_epochs(raw, rec_params['trial_duration'], reject_bad=not rec_params['use_synthetic_board'])
     best_hyperparams = grid_search_pipeline_hyperparams(epochs, labels)
     save_hyperparams(best_hyperparams, subject)
 
@@ -33,6 +33,3 @@ def find_best_hyperparams_for_subject(subject):
 if __name__ == "__main__":
     rec_params = load_rec_params()
     record_create_pipeline_to_online(rec_params)
-    find_best_hyperparams_for_subject("David4")
-    pipeline = create_pipeline_for_subject("David4")
-    record_data(rec_params, pipeline)
