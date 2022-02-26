@@ -1,7 +1,7 @@
 import os
 import json
 import datetime
-from constants import *
+from src.constants import *
 from pathlib import Path
 import mne
 import pickle

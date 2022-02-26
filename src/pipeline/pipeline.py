@@ -1,13 +1,13 @@
 import mne
-from Marker import Marker
-from .preprocessing import Preprocessor, reject_epochs
-from .features import FeatureExtractor
+from src.recording.Marker import Marker
+from src.pipeline.preprocessing import Preprocessor, reject_epochs
+from src.pipeline.features import FeatureExtractor
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.model_selection import RepeatedStratifiedKFold, cross_val_score
 from sklearn.pipeline import Pipeline
 import numpy as np
 from sklearn.model_selection import GridSearchCV
-from data_utils import load_recordings
+from src.data_utils import load_recordings
 
 DEFAULT_HYPERPARAMS = {
     "preprocessing__epoch_tmin": 0.1,
