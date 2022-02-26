@@ -2,7 +2,7 @@ import os
 from constants import *
 import mne
 from pathlib import Path
-from recording.Marker import Marker
+from Marker import Marker
 from scipy import signal
 import matplotlib.pyplot as plt
 import numpy as np

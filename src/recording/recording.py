@@ -1,9 +1,9 @@
 import numpy as np
 from Marker import Marker
-from board import Board
+from .board import Board
 
-from ..pipeline.pipeline import get_epochs
-from ..data_utils import load_rec_params, save_raw
+from pipeline.pipeline import get_epochs
+from data_utils import load_rec_params, save_raw
 
 # from psychopy import visual, core, event
 
