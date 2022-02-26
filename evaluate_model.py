@@ -1,4 +1,3 @@
-
 from pipeline import load_pipeline, load_recordings, get_epochs
 from sklearn.metrics import confusion_matrix
 import numpy as np
@@ -14,12 +13,15 @@ def main():
     # data
     raw, params = load_recordings(data_subject_name)
     epochs, labels = get_epochs(raw, params["trial_duration"])
-    epochs = epochs.get_data()
 
     # evaluate
     predictions = pipeline.predict(epochs)
 
     # statistics
+    print_statistics(labels, predictions)
+
+
+def print_statistics(labels, predictions):
     conf_matrix = confusion_matrix(labels, predictions)
     print('confusion matrix (row=label, column=prediction):')
     print(conf_matrix)
@@ -30,14 +32,13 @@ def main():
 
 
 def calculate_true_and_false_rates(conf_matrix):
-
     rates = np.zeros((3, 2))
 
     # true positive
     for i in range(0, 3):
-        true_label_list = conf_matrix[i]
-        total_num_true = sum(true_label_list)
-        num_hits = true_label_list[i]
+        row = conf_matrix[i]
+        total_num_true = sum(row)
+        num_hits = row[i]
         rates[i][0] = num_hits/total_num_true
 
     # false positive
