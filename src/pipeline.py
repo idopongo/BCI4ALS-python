@@ -19,7 +19,7 @@ DEFAULT_HYPERPARAMS = {
     "feature_extraction__n_per_seg": 120,
     "feature_extraction__n_overlap": 0.3,
     "feature_extraction__freq_bands": [8, 12, 30],
-    "CSP__n_components": 8,
+    "CSP__n_components": 5,
 }
 
 
@@ -45,6 +45,8 @@ def create_and_fit_pipeline(raw, recording_params, hyperparams=DEFAULT_HYPERPARA
 
 
 def create_pipeline(hyperparams=DEFAULT_HYPERPARAMS, pipeline_type="spectral"):
+    if hyperparams is None:
+        hyperparams = DEFAULT_HYPERPARAMS
     lda = LinearDiscriminantAnalysis()
     if pipeline_type == "spectral":
         pipeline = Pipeline(
