@@ -3,6 +3,8 @@ import json
 import datetime
 from src.constants import *
 from pathlib import Path
+from tkfilebrowser import askopendirnames
+from tkinter import Tk
 import mne
 import pickle
 
@@ -50,21 +52,26 @@ def get_subject_rec_folders(subj):
     return subj_recs
 
 
-def load_recordings(subj):
+def load_recordings(subj, choose=False):
     """
     Load all the recordings, all from the most recent day.
     """
-    print(f'Loading recordings for subject {subj}...')
-    subj_recs = get_subject_rec_folders(subj)
+    if choose:
+        # root = Tk()
+        subj_recs_recent = askopendirnames(initialdir=RECORDINGS_DIR)
+        # root.destroy()
+    else:
+        print(f'Loading recordings for subject {subj}...')
+        subj_recs = get_subject_rec_folders(subj)
 
-    if len(subj_recs) == 0:
-        raise ValueError(f'No recordings found for subject: {subj}')
+        if len(subj_recs) == 0:
+            raise ValueError(f'No recordings found for subject: {subj}')
 
-    most_recent_rec_date = get_file_date(sorted(subj_recs)[-1])
-    subj_recs_recent = [rec for rec in subj_recs if get_file_date(rec) == most_recent_rec_date]
+        most_recent_rec_date = get_file_date(sorted(subj_recs)[-1])
+        subj_recs_recent = [rec for rec in subj_recs if get_file_date(rec) == most_recent_rec_date]
 
-    if len(subj_recs_recent) != len(subj_recs):
-        print(f'There are recordings taken from multiple days, using the most recent {most_recent_rec_date}')
+        if len(subj_recs_recent) != len(subj_recs):
+            print(f'There are recordings taken from multiple days, using the most recent {most_recent_rec_date}')
 
     raws = [load_recording(rec) for rec in subj_recs_recent]
 

@@ -5,10 +5,12 @@ from board import Board
 from pipeline import get_epochs
 from src.data_utils import load_rec_params, save_raw
 
-from psychopy import visual, core, event
-
 BG_COLOR = "black"
 STIM_COLOR = "white"
+
+visual = None
+core = None
+event = None
 
 
 def record_data(rec_params, pipeline=None):
@@ -21,6 +23,12 @@ def run_session(params, pipeline=None):
     """
     Run a recording session, if pipeline is passed display prediction after every epoch
     """
+
+    # import psychopy only here to prevent pygame loading.
+    from psychopy import visual as vis, core as cor, event as eve
+    global visual, core, event
+    visual, core, event = vis, cor, eve
+
     # create list of random trials
     trial_markers = Marker.all() * params["trials_per_stim"]
     np.random.shuffle(trial_markers)
