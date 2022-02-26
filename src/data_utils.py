@@ -99,6 +99,10 @@ def load_hyperparams(subject, pipeline_type="spectral"):
     all_hyperparams = os.listdir(HYPERPARAMS_DIR)
     subj_hyperparams = sorted([p for p in all_hyperparams if p.split("_")[1] == subject])
 
+    if len(subj_hyperparams) == 0:
+        print(f'No hyperparams found for subject {subject}')
+        return None
+
     if len(subj_hyperparams) > 1:
         print("Multiple hyperparam files found, taking most recent")
 
