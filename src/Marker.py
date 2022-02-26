@@ -1,5 +1,5 @@
 from enum import IntEnum, unique
-from ..constants import IMAGES_DIR
+from constants import IMAGES_DIR
 import os
 
 
