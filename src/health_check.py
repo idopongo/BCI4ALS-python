@@ -22,7 +22,7 @@ def health_check():
             errors_by_chan = check_chan_health(data)
             update_chan_plots(chan_plots, data, window_size)
             update_montage_plot(montage_plot, errors_by_chan, chan_error_texts)
-            # update_psd_plot(psd_plots, data, fs)
+            update_psd_plot(psd_plots, data, fs)
             plt.draw()
             plt.pause(1e-3)
 
@@ -36,15 +36,15 @@ def plot_psd(ax, chan_names):
         ax.set_ylabel('Power')
         ax.set_xlabel('Frequency [Hz]')
         ax.grid(True)
-        ax.set_ylim(0, 7000)
-        ax.set_xlim(0, 80)
+        ax.set_ylim(-30, 100)
+        ax.set_xlim(0, 60)
     return chan_lines
 
 
 def update_psd_plot(psd_plots, data, sfreq):
     for plot, chan in zip(psd_plots, data):
         freq, power = scipy.signal.welch(chan, sfreq, nperseg=sfreq, scaling="density")
-        plot.set_data(freq, power)
+        plot.set_data(freq, 10 * np.log10(power))
 
 
 def on_press(event):
@@ -86,15 +86,15 @@ def plot_montage(ch_names, ax):
     scale_num = 2 / 3
     # Get channel positions from standard_1020 montage
     montage = mne.channels.make_standard_montage('standard_1020')
-    ch_pos = {key: value * scale_num for key, value in montage.get_positions()["ch_pos"].items() if key in ch_names}
-    x = [scale_num * pos[0] for pos in ch_pos.values()]
-    y = [scale_num * pos[1] for pos in ch_pos.values()]
+    ch_pos = {key: value for key, value in montage.get_positions()["ch_pos"].items() if key in ch_names}
+    x = [pos[0] for pos in ch_pos.values()]
+    y = [pos[1] for pos in ch_pos.values()]
     ax.axis('off')
     montage_plot = ax.scatter(x, y, 600, "white", edgecolor="black")
     chan_error_texts = []
     for ch_name, pos in ch_pos.items():
-        ax.text(scale_num * pos[0], scale_num * pos[1], ch_name, ha="center", va="center")
-        chan_error_texts.append(ax.text(scale_num * pos[0], scale_num * pos[1], "errors: ", ha="center", va="center"))
+        ax.text(pos[0], pos[1], ch_name, ha="center", va="center")
+        chan_error_texts.append(ax.text(pos[0], pos[1] - 0.01, "errors: ", ha="center", va="center"))
         ax.set_xticks([])
         ax.set_yticks([])
     return montage_plot, chan_error_texts
@@ -128,11 +128,11 @@ def check_chan_health(data):
             errors = []
             if np.abs(avg_corr) < 0.05:
                 errors.append("avg corr too low")
-            if np.abs(avg_corr) > 0.9:
+            elif np.abs(avg_corr) > 0.9:
                 errors.append("avg corr too high")
             if max > 300:
                 errors.append("amplitude too high")
-            if max < 10:
+            elif max < 10:
                 errors.append("amplitude too low")
             errors_by_chan[i] = errors
     return errors_by_chan

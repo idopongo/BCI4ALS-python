@@ -5,6 +5,11 @@ from board import Board
 from pipeline import get_epochs
 from src.data_utils import load_rec_params, save_raw
 
+from psychopy import visual, core, event, sound
+import os
+
+from data_utils import load_pipeline
+
 BG_COLOR = "black"
 STIM_COLOR = "white"
 
@@ -43,13 +48,13 @@ def run_session(params, pipeline=None):
         for i, marker in enumerate(trial_markers):
             # "get ready" period
             show_stim_for_duration(win, progress_text(win, i + 1, len(trial_markers), marker),
-                                   params["get_ready_duration"])
+                                   progress_sound(marker), params["get_ready_duration"])
             # calibration period
             core.wait(params["calibration_duration"])
 
             # motor imagery period
             board.insert_marker(marker)
-            show_stim_for_duration(win, marker_stim(win, marker), params["trial_duration"])
+            show_stim_with_beeps(win, marker_stim(win, marker), params["trial_duration"])
 
             if pipeline:
                 # We need to wait a short time between the end of the trial and trying to get it's data to make sure
@@ -64,8 +69,9 @@ def run_session(params, pipeline=None):
                 prediction = pipeline.predict(epochs)[-1]
 
                 # display prediction result
-                txt = classification_result_txt(win, marker, prediction)
-                show_stim_for_duration(win, txt, params["display_online_result_duration"])
+                show_stim_for_duration(win, classification_result_txt(win, marker, prediction),
+                                       classification_result_sound(marker, prediction),
+                                       params["display_online_result_duration"])
         core.wait(0.5)
         win.close()
         return board.get_data()
@@ -87,14 +93,28 @@ def marker_stim(win, marker):
     return shape
 
 
-def show_stim_for_duration(win, stim, duration):
+def show_stim_for_duration(win, vis_stim, aud_stim, duration):
     # Adding this code here is an easy way to make sure we check for an escape event before showing every stimulus
     if 'escape' in event.getKeys():
         core.quit()
 
-    stim.draw()  # draw stim on back buffer
+    vis_stim.draw()  # draw stim on back buffer
+    aud_stim.play()
     win.flip()  # flip the front and back buffers and then clear the back buffer
     core.wait(duration)
+    win.flip()  # flip back to the (now empty) back buffer
+
+
+def show_stim_with_beeps(win, vis_stim, duration):
+    # Adding this code here is an easy way to make sure we check for an escape event before showing every stimulus
+    if 'escape' in event.getKeys():
+        core.quit()
+
+    vis_stim.draw()  # draw stim on back buffer
+    sound.Sound("a", secs=0.1).play()
+    win.flip()  # flip the front and back buffers and then clear the back buffer
+    core.wait(duration)
+    sound.Sound("c", secs=0.1).play()
     win.flip()  # flip back to the (now empty) back buffer
 
 
@@ -103,6 +123,16 @@ def progress_text(win, done, total, stim):
                           bold=True, alignHoriz='center', alignVert='center')
     txt.font = 'arial'
     return txt
+
+
+def progress_sound(stim):
+    return sound.Sound(os.path.join("../audio", f"{Marker(stim).name}.ogg"))
+
+
+def classification_result_sound(marker, prediction):
+    if marker == prediction:
+        return sound.Sound(os.path.join("../audio", "good job!.ogg"))
+    return sound.Sound(os.path.join("../audio", "try again.ogg"))
 
 
 def classification_result_txt(win, marker, prediction):
@@ -122,5 +152,6 @@ def marker_image(win, marker):
 
 
 if __name__ == "__main__":
+    pip_ido = load_pipeline("Ido2")
     rec_params = load_rec_params()
-    record_data(rec_params)
+    record_data(rec_params, pip_ido)

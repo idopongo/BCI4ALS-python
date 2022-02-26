@@ -1,5 +1,6 @@
 import mne
 import numpy as np
+from health_check import get_average_corr
 
 from board import EEG_CHAN_NAMES
 
@@ -48,25 +49,31 @@ def preprocess(raw):
 
 
 def reject_epochs(epochs, labels):
-    rejected_max_val = 200 * 1e-6
-    rejected_min_val = 1 * 1e-7
-
     bad_epochs = dict()
     for epoch_idx, epoch in enumerate(epochs):
         reasons = {
             'bad_chans': [],
             'reason': []
         }
-        for i in range(len(epoch[:, 1])):
-            curr_chan = epoch[i, :]
-            if abs(curr_chan.min()) < rejected_min_val:
-                reasons['bad_chans'].append(i)
-                reasons['reason'].append('too low')
-            elif abs(curr_chan.max()) > rejected_max_val:
-                reasons['bad_chans'].append(i)
-                reasons['reason'].append('too high')
+        chan_index = list(range(len(epoch[:, 1])))
+        for chan in range(len(chan_index)):
+            curr_chan = epoch[chan, :]
+            if abs(curr_chan.min()) < 1 * 1e-7:
+                reasons['bad_chans'].append(chan)
+                reasons['reason'].append('amp low')
+            elif abs(curr_chan.max()) > 200 * 1e-6:
+                reasons['bad_chans'].append(chan)
+                reasons['reason'].append('amp high')
+            all_chan_except = chan_index.remove(chan)
+            average_corr_chan = get_average_corr(chan, epoch[all_chan_except, :])
+            if abs(average_corr_chan) < 0.05:
+                reasons['bad_chans'].append(chan)
+                reasons['reason'].append('corr low')
+            elif abs(average_corr_chan) > 0.9:
+                reasons['bad_chans'].append(chan)
+                reasons['reason'].append('corr high')
 
-        if len(reasons['bad_chans']) > 2:
+        if len(reasons['bad_chans']) > 3:
             bad_epochs[epoch_idx] = reasons
     n_epochs_removed = len(bad_epochs.keys())
     print(f"{n_epochs_removed} epochs rejected")

@@ -38,7 +38,6 @@ def find_best_hyperparams_for_subject(subject=None, pipeline_type="spectral", ch
 
 
 if __name__ == "__main__":
+    pipeline = create_pipeline_for_subject("Avigail")
     rec_params = load_rec_params()
-    record_and_create_pipeline(rec_params)
-    # create_pipeline_for_subject("Ido5", pipeline_type="csp", choose=True)
-    # find_best_hyperparams_for_subject(choose=True)
+    # record_data(rec_params, pipeline)

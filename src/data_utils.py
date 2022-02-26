@@ -90,7 +90,7 @@ def save_pipeline(pipeline, subject):
 
 def load_pipeline(subj):
     all_pipelines = os.listdir(PIPELINES_DIR)
-    subj_pipelines = sorted([p for p in all_pipelines if p.split("_")[1] == subj])
+    subj_pipelines = sorted([p for p in all_pipelines if p.split("_")[1] == f"{subj}.pickle"])
     latest_pipeline = subj_pipelines[-1]
     load_path = os.path.join(PIPELINES_DIR, latest_pipeline)
     return pickle_load(load_path)
