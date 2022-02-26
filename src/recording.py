@@ -2,22 +2,22 @@ import numpy as np
 from Marker import Marker
 from board import Board
 
-from pipeline import get_epochs
-from src.data_utils import load_rec_params, save_raw
+from pipeline import get_epochs, create_and_fit_pipeline, evaluate_pipeline
+from src.data_utils import load_rec_params, save_raw, load_pipeline
 
-from psychopy import visual, core, event
+# from psychopy import visual, core, event
 
 BG_COLOR = "black"
 STIM_COLOR = "white"
 
 
-def record_data(rec_params, pipeline=None):
-    raw = run_session(rec_params, pipeline)
+def record_data(rec_params, pipeline=None, live_retraining=False):
+    raw = run_session(rec_params, pipeline, live_retraining)
     folder_path = save_raw(raw, rec_params)
     return raw
 
 
-def run_session(params, pipeline=None):
+def run_session(params, pipeline=None, live_retraining=False):
     """
     Run a recording session, if pipeline is passed display prediction after every epoch
     """
@@ -31,6 +31,7 @@ def run_session(params, pipeline=None):
     loop_through_messages(win, [msg1])
 
     # start recording
+    best_accuracy = 0
     with Board(use_synthetic=params["use_synthetic_board"]) as board:
         for i, marker in enumerate(trial_markers):
             # "get ready" period
@@ -58,6 +59,15 @@ def run_session(params, pipeline=None):
                 # display prediction result
                 txt = classification_result_txt(win, marker, prediction)
                 show_stim_for_duration(win, txt, params["display_online_result_duration"])
+
+            if live_retraining and (i % 5) == 0:
+                text_stim("Retraining classifier, please wait :)")
+                new_pipeline = create_and_fit_pipeline(raw, recording_params=rec_params)
+                accuracy = evaluate_pipeline(new_pipeline)
+                if accuracy > best_accuracy:
+                    best_accuracy = accuracy
+                    pipeline = new_pipeline
+
         core.wait(0.5)
         win.close()
         return board.get_data()
@@ -90,11 +100,14 @@ def show_stim_for_duration(win, stim, duration):
     win.flip()  # flip back to the (now empty) back buffer
 
 
-def progress_text(win, done, total, stim):
-    txt = visual.TextStim(win=win, text=f'trial {done}/{total}\n get ready for {Marker(stim).name}', color=STIM_COLOR,
-                          bold=True, alignHoriz='center', alignVert='center')
+def text_stim(win, text):
+    txt = visual.TextStim(win=win, text=text, color=STIM_COLOR, bold=True, alignHoriz='center', alignVert='center')
     txt.font = 'arial'
     return txt
+
+
+def progress_text(win, done, total, stim):
+    return text_stim(win, f'trial {done}/{total}\n get ready for {Marker(stim).name}')
 
 
 def classification_result_txt(win, marker, prediction):
@@ -114,5 +127,6 @@ def marker_image(win, marker):
 
 
 if __name__ == "__main__":
+    pipeline = load_pipeline("Ido2")
     rec_params = load_rec_params()
-    record_data(rec_params)
+    record_data(rec_params, pipeline=pipeline, live_retraining=True)

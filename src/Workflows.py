@@ -2,7 +2,7 @@ from recording import record_data
 from pipeline import create_and_fit_pipeline, evaluate_pipeline, get_epochs, \
     grid_search_pipeline_hyperparams
 
-from data_utils import load_recordings, load_hyperparams, save_hyperparams, load_rec_params
+from data_utils import load_recordings, load_hyperparams, save_hyperparams, load_rec_params, load_pipeline
 
 
 def record_and_create_pipeline(rec_params):
@@ -39,4 +39,5 @@ def find_best_hyperparams_for_subject(subject, pipeline_type="spectral"):
 
 if __name__ == "__main__":
     rec_params = load_rec_params()
-    create_pipeline_for_subject("David3", pipeline_type="csp")
+    pipeline = create_pipeline_for_subject("David3", pipeline_type="csp")
+    # raw = record_data(rec_params, pipeline)

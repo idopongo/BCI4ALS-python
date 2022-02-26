@@ -8,6 +8,7 @@ from sklearn.pipeline import Pipeline
 import numpy as np
 from sklearn.model_selection import GridSearchCV
 from src.data_utils import load_recordings
+from sklearn.svm import SVC
 
 mne.set_log_level('warning')
 
@@ -19,7 +20,7 @@ DEFAULT_HYPERPARAMS = {
     "feature_extraction__n_per_seg": 120,
     "feature_extraction__n_overlap": 0.3,
     "feature_extraction__freq_bands": [8, 12, 30],
-    "CSP__n_components": 8,
+    "CSP__n_components": 5,
 }
 
 
@@ -31,6 +32,7 @@ def evaluate_pipeline(pipeline, epochs, labels):
     scores = cross_val_score(pipeline, epochs, labels, cv=skf)
     print(
         f'Accuracy: \n mean: {np.round(np.mean(scores), 2)} \n std: {np.round(np.std(scores), 3)}')
+    return np.round(np.mean(scores), 2)
 
 
 def create_and_fit_pipeline(raw, recording_params, hyperparams=DEFAULT_HYPERPARAMS,
@@ -72,14 +74,17 @@ def show_pipeline_steps(pipeline):
 def grid_search_pipeline_hyperparams(epochs, labels, pipeline_type):
     pipeline = create_pipeline(pipeline_type=pipeline_type)
     gridsearch_params = {
-        "preprocessing__epoch_tmin": [0.1, 1],
-        "preprocessing__l_freq": [2, 5, 7],
-        "preprocessing__h_freq": [24, 28],
+        "preprocessing__epoch_tmin": [0],
+        "preprocessing__l_freq": [3, 5, 7],
+        "preprocessing__h_freq": [20, 24, 28, 30],
         "feature_extraction__n_fft": [250],
         "feature_extraction__n_per_seg": [120],
-        "feature_extraction__n_overlap": [0],
-        "feature_extraction__freq_bands": [[11, 30], [8, 12, 30]],
-        "CSP__n_components": [5, 6, 7, 8]
+        "feature_extraction__n_overlap": [0.2],
+        "feature_extraction__freq_bands": [[7, 12, 28]],
+        "CSP__n_components": [4, 5, 6, 7, 8, 9],
+        # "lda__C": [0.1, 1, 10, 100],
+        # "lda__gamma": [1, 0.1, 0.01, 0.001],
+        # "lda__kernel": ['rbf', 'poly', 'sigmoid']
     }
     gridsearch_params = filter_hyperparams_for_pipeline(gridsearch_params, pipeline)
     skf = RepeatedStratifiedKFold(n_splits=3, n_repeats=5)
