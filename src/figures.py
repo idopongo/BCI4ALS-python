@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 from preprocessing import preprocess
-from pipeline import get_subject_rec_folders
+from data_utils import get_subject_rec_folders
 
 
 def create_and_save_plots(rec_folder_name, bad_electrodes=[]):

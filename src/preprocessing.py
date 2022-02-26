@@ -1,6 +1,17 @@
 import mne
 import numpy as np
 
+from board import EEG_CHAN_NAMES
+
+LAPLACIAN = {
+    "C3": ["FC5", "FC1", "CP5", "CP1"],
+    "Cz": ["FC1", "FC2", "CP1", "CP2"],
+    "C4": ["FC2", "FC6", "CP2", "CP6"]
+}
+
+LAPLACIAN = {EEG_CHAN_NAMES.index(key): [EEG_CHAN_NAMES.index(chan) for chan in value] for key, value in
+             LAPLACIAN.items()}
+
 
 class Preprocessor:
     def __init__(self):
@@ -17,27 +28,17 @@ class Preprocessor:
         return self
 
     def transform(self, epochs):
+        epochs = laplacian(epochs)
         epochs = mne.filter.filter_data(epochs, 125, self.l_freq, self.h_freq, verbose=False)
         epochs = epochs[:, :, int(125 * self.epoch_tmin):]
         return epochs
 
 
-def laplacian(raw):
-    def laplacian_C3(chan):
-        avg = (raw["FC5"][0] + raw["FC1"][0] + raw["CP5"][0] + raw["CP1"][0]) / 4
-        return chan - avg.squeeze()
-
-    def laplacian_C4(chan):
-        avg = (raw["FC2"][0] + raw["FC6"][0] + raw["CP2"][0] + raw["CP6"][0]) / 4
-        return chan - avg.squeeze()
-
-    def laplacian_Cz(chan):
-        avg = (raw["FC1"][0] + raw["FC2"][0] + raw["CP1"][0] + raw["CP2"][0]) / 4
-        return chan - avg.squeeze()
-
-    raw.apply_function(laplacian_C3, picks=["C3"])
-    raw.apply_function(laplacian_C4, picks=["C4"])
-    raw.apply_function(laplacian_Cz, picks=["Cz"])
+def laplacian(epochs):
+    filtered_epochs = np.copy(epochs)
+    for chan, adjacent_chans in LAPLACIAN.items():
+        filtered_epochs[:, chan, :] -= np.mean(epochs[:, adjacent_chans, :], axis=1)
+    return filtered_epochs
 
 
 def preprocess(raw):
@@ -47,8 +48,8 @@ def preprocess(raw):
 
 
 def reject_epochs(epochs, labels):
-    rejected_max_val = 300 * 1e-6
-    rejected_min_val = 5 * 1e-6
+    rejected_max_val = 200 * 1e-6
+    rejected_min_val = 1 * 1e-7
 
     bad_epochs = dict()
     for epoch_idx, epoch in enumerate(epochs):
@@ -67,9 +68,10 @@ def reject_epochs(epochs, labels):
 
         if len(reasons['bad_chans']) > 2:
             bad_epochs[epoch_idx] = reasons
-
-    print(f"{len(bad_epochs.keys())} epochs removed")
-    print(bad_epochs)
+    n_epochs_removed = len(bad_epochs.keys())
+    print(f"{n_epochs_removed} epochs rejected")
+    if n_epochs_removed:
+        print(bad_epochs)
     return np.delete(epochs, list(bad_epochs.keys()), axis=0), np.delete(labels, list(bad_epochs.keys()), axis=0)
 
 
@@ -77,5 +79,4 @@ def find_average_voltage(epochs):
     vol_per_chan = {}
     for chan_inx in range(len(epochs[0, :, 0])):
         vol_per_chan[chan_inx + 1] = np.mean(epochs[:, chan_inx, :])
-    print(vol_per_chan)
     return vol_per_chan
