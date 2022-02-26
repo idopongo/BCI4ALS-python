@@ -10,18 +10,13 @@ from sklearn.model_selection import GridSearchCV
 from ..data_utils import load_recordings
 
 DEFAULT_HYPERPARAMS = {
-    "preprocessing__epoch_tmin": 1,
+    "preprocessing__epoch_tmin": 0.1,
     "preprocessing__l_freq": 2,
     "preprocessing__h_freq": 24,
     "feature_extraction__n_fft": 250,
-    "feature_extraction__n_per_seg": 62,
-    "feature_extraction__n_overlap": 0.2,
-    "feature_extraction__freq_bands": [
-        8,
-        12,
-        20,
-        30
-    ],
+    "feature_extraction__n_per_seg": 120,
+    "feature_extraction__n_overlap": 0,
+    "feature_extraction__freq_bands": [8, 12, 30],
 }
 
 
@@ -61,6 +56,27 @@ def create_csp_pipeline(hyperparams=DEFAULT_HYPERPARAMS):
 
 def grid_search_pipeline_hyperparams(epochs, labels):
     pipeline = create_csp_pipeline()
+    gridsearch_params = {
+        "preprocessing__epoch_tmin": [0.1, 1],
+        "preprocessing__l_freq": [2, 5, 7],
+        "preprocessing__h_freq": [24, 28],
+        "feature_extraction__n_fft": [250],
+        "feature_extraction__n_per_seg": [120],
+        "feature_extraction__n_overlap": [0],
+        "feature_extraction__freq_bands": [[11, 30], [8, 12, 30]],
+    }
+    skf = RepeatedStratifiedKFold(n_splits=3, n_repeats=5)
+    mne.set_log_level(verbose="WARNING")
+    gs = GridSearchCV(pipeline, gridsearch_params, cv=skf, n_jobs=-1, verbose=10, error_score="raise")
+    mne.set_log_level(verbose="INFO")
+    gs.fit(epochs, labels)
+    print("Best parameter (CV score=%0.3f):" % gs.best_score_)
+    print(gs.best_params_)
+    return gs.best_params_
+
+
+def grid_search_csp_hyperparams(epochs, labels):
+    pipeline = create_pipeline()
     gridsearch_params = {
         "preprocessing__epoch_tmin": [0, 0.5, 1, 1.5],
         "preprocessing__l_freq": [5, 7],
