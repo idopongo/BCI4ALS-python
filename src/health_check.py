@@ -36,15 +36,15 @@ def plot_psd(ax, chan_names):
         ax.set_ylabel('Power')
         ax.set_xlabel('Frequency [Hz]')
         ax.grid(True)
-        ax.set_ylim(0, 7000)
-        ax.set_xlim(0, 80)
+        ax.set_ylim(-30, 100)
+        ax.set_xlim(0, 60)
     return chan_lines
 
 
 def update_psd_plot(psd_plots, data, sfreq):
     for plot, chan in zip(psd_plots, data):
         freq, power = scipy.signal.welch(chan, sfreq, nperseg=sfreq, scaling="density")
-        plot.set_data(freq, power)
+        plot.set_data(freq, 10 * np.log10(power))
 
 
 def on_press(event):
@@ -86,15 +86,15 @@ def plot_montage(ch_names, ax):
     scale_num = 2 / 3
     # Get channel positions from standard_1020 montage
     montage = mne.channels.make_standard_montage('standard_1020')
-    ch_pos = {key: value * scale_num for key, value in montage.get_positions()["ch_pos"].items() if key in ch_names}
-    x = [scale_num * pos[0] for pos in ch_pos.values()]
-    y = [scale_num * pos[1] for pos in ch_pos.values()]
+    ch_pos = {key: value for key, value in montage.get_positions()["ch_pos"].items() if key in ch_names}
+    x = [pos[0] for pos in ch_pos.values()]
+    y = [pos[1] for pos in ch_pos.values()]
     ax.axis('off')
     montage_plot = ax.scatter(x, y, 600, "white", edgecolor="black")
     chan_error_texts = []
     for ch_name, pos in ch_pos.items():
-        ax.text(scale_num * pos[0], scale_num * pos[1], ch_name, ha="center", va="center")
-        chan_error_texts.append(ax.text(scale_num * pos[0], scale_num * pos[1], "errors: ", ha="center", va="center"))
+        ax.text(pos[0], pos[1], ch_name, ha="center", va="center")
+        chan_error_texts.append(ax.text(pos[0], pos[1] - 0.01, "errors: ", ha="center", va="center"))
         ax.set_xticks([])
         ax.set_yticks([])
     return montage_plot, chan_error_texts

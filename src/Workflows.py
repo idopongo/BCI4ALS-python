@@ -39,4 +39,4 @@ def find_best_hyperparams_for_subject(subject, pipeline_type="spectral"):
 
 if __name__ == "__main__":
     rec_params = load_rec_params()
-    create_pipeline_for_subject("David3", pipeline_type="csp")
+    record_and_create_pipeline(rec_params)
