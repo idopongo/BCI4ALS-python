@@ -128,11 +128,11 @@ def check_chan_health(data):
             errors = []
             if np.abs(avg_corr) < 0.05:
                 errors.append("avg corr too low")
-            if np.abs(avg_corr) > 0.9:
+            elif np.abs(avg_corr) > 0.9:
                 errors.append("avg corr too high")
             if max > 300:
                 errors.append("amplitude too high")
-            if max < 10:
+            elif max < 10:
                 errors.append("amplitude too low")
             errors_by_chan[i] = errors
     return errors_by_chan
