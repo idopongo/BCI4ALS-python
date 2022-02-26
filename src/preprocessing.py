@@ -68,9 +68,10 @@ def reject_epochs(epochs, labels):
 
         if len(reasons['bad_chans']) > 2:
             bad_epochs[epoch_idx] = reasons
-
-    print(f"{len(bad_epochs.keys())} epochs removed")
-    print(bad_epochs)
+    n_epochs_removed = len(bad_epochs.keys())
+    print(f"{n_epochs_removed} epochs rejected")
+    if n_epochs_removed:
+        print(bad_epochs)
     return np.delete(epochs, list(bad_epochs.keys()), axis=0), np.delete(labels, list(bad_epochs.keys()), axis=0)
 
 

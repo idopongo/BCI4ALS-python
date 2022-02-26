@@ -54,6 +54,7 @@ def load_recordings(subj):
     """
     Load all the recordings, all from the most recent day.
     """
+    print(f'Loading recordings for subject {subj}...')
     subj_recs = get_subject_rec_folders(subj)
 
     if len(subj_recs) == 0:
@@ -61,6 +62,10 @@ def load_recordings(subj):
 
     most_recent_rec_date = get_file_date(sorted(subj_recs)[-1])
     subj_recs_recent = [rec for rec in subj_recs if get_file_date(rec) == most_recent_rec_date]
+
+    if len(subj_recs_recent) != len(subj_recs):
+        print(f'There are recordings taken from multiple days, using the most recent {most_recent_rec_date}')
+
     raws = [load_recording(rec) for rec in subj_recs_recent]
 
     # When multiple recordings are loaded, the recording_params.json is taken from the first recording
@@ -72,26 +77,31 @@ def load_recordings(subj):
 
 
 def save_pipeline(pipeline, subject):
-    save_path = os.path.join(PIPELINES_DIR, f'pipeline_{now_datestring()}_{subject}.pickle')
+    save_path = os.path.join(PIPELINES_DIR, f'{now_datestring()}_{subject}_pipeline.pickle')
     pickle_dump(pipeline, save_path)
 
 
 def load_pipeline(subj):
     all_pipelines = os.listdir(PIPELINES_DIR)
-    subj_pipelines = sorted([p for p in all_pipelines if p.split("_")[-1] == subj])
+    subj_pipelines = sorted([p for p in all_pipelines if p.split("_")[1] == subj])
     latest_pipeline = subj_pipelines[-1]
     load_path = os.path.join(PIPELINES_DIR, latest_pipeline)
     return pickle_load(load_path)
 
 
 def save_hyperparams(hyperparams, subject):
-    save_path = os.path.join(HYPERPARAMS_DIR, f'{subject}_hyperparams.json')
+    save_path = os.path.join(HYPERPARAMS_DIR, f'{now_datestring()}_{subject}_hyperparams.json')
     json_dump(hyperparams, save_path)
 
 
-def load_hyperparams(subject):
+def load_hyperparams(subject, pipeline_type="spectral"):
+    print(f'Loading hyperparams for subject {subject}...')
     all_hyperparams = os.listdir(HYPERPARAMS_DIR)
-    subj_hyperparams = sorted([p for p in all_hyperparams if p.split("_")[0] == subject])
+    subj_hyperparams = sorted([p for p in all_hyperparams if p.split("_")[1] == subject])
+
+    if len(subj_hyperparams) > 1:
+        print("Multiple hyperparam files found, taking most recent")
+
     latest_hyperparams = subj_hyperparams[-1]
     return json_load(os.path.join(HYPERPARAMS_DIR, latest_hyperparams))
 
