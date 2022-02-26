@@ -10,7 +10,7 @@ SYNTHETIC_SUBJECT_NAME = "Synthetic"
 
 
 def now_datestring():
-    return datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
+    return datetime.datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
 
 
 def save_raw(raw, rec_params):
@@ -55,6 +55,10 @@ def load_recordings(subj):
     Load all the recordings, all from the most recent day.
     """
     subj_recs = get_subject_rec_folders(subj)
+
+    if len(subj_recs) == 0:
+        raise ValueError(f'No recordings found for subject: {subj}')
+
     most_recent_rec_date = get_file_date(sorted(subj_recs)[-1])
     subj_recs_recent = [rec for rec in subj_recs if get_file_date(rec) == most_recent_rec_date]
     raws = [load_recording(rec) for rec in subj_recs_recent]

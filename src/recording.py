@@ -5,7 +5,7 @@ from board import Board
 from pipeline import get_epochs
 from src.data_utils import load_rec_params, save_raw
 
-# from psychopy import visual, core, event
+from psychopy import visual, core, event
 
 BG_COLOR = "black"
 STIM_COLOR = "white"
