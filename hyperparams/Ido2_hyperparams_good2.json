@@ -1,0 +1,12 @@
+{
+    "feature_extraction__freq_bands": [
+        12,
+        30
+    ],
+    "feature_extraction__n_fft": 300,
+    "feature_extraction__n_overlap": 0.01,
+    "feature_extraction__n_per_seg": 120,
+    "preprocessing__epoch_tmin": 1,
+    "preprocessing__h_freq": 26,
+    "preprocessing__l_freq": 5
+}
