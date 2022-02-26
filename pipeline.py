@@ -39,7 +39,6 @@ def evaluate_pipeline(pipeline, epochs, labels):
 def create_and_fit_pipeline(raw, recording_params, hyperparams=DEFAULT_HYPERPARAMS):
     # get data, epochs
     epochs, labels = get_epochs(raw, recording_params["trial_duration"])
-    epochs, labels = reject_epochs(epochs, labels)
     # create a pipeline from params
     pipeline = create_csp_pipeline(hyperparams)
     pipeline.fit(epochs, labels)
@@ -91,10 +90,10 @@ def load_hyperparams(subject):
 def grid_search_pipeline_hyperparams(epochs, labels):
     pipeline = create_csp_pipeline()
     gridsearch_params = {
-        "preprocessing__epoch_tmin": [0, 0.5, 1],
-        "preprocessing__l_freq": [2, 5, 8],
-        "preprocessing__h_freq": [24, 30],
-        "CSP__n_components": [4, 5, 6, 7, 8, 9, 10]
+        "preprocessing__epoch_tmin": [0, 0.5, 1, 1.5],
+        "preprocessing__l_freq": [5, 7],
+        "preprocessing__h_freq": [27, 30],
+        "CSP__n_components": [5, 6, 7, 8]
     }
     skf = RepeatedStratifiedKFold(n_splits=3, n_repeats=5)
     mne.set_log_level(verbose="WARNING")
@@ -112,10 +111,12 @@ def get_epochs(raw, trial_duration, markers=Marker.all()):
 
     # running get data triggers dropping of epochs, we want to make sure this happens now so that the labels are
     # consistent with the epochs
-    epochs.get_data()
-
+    epochs_data = epochs.get_data()
     labels = epochs.events[:, -1]
-    return epochs, labels
+
+    epochs_data, labels = reject_epochs(epochs_data, labels)
+
+    return epochs_data, labels
 
 
 def load_recordings(subj):

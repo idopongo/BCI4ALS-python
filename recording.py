@@ -9,7 +9,7 @@ import json
 from pipeline import get_epochs
 from figures import create_and_save_plots
 
-# from psychopy import visual, core, event
+from psychopy import visual, core, event
 
 BG_COLOR = "black"
 STIM_COLOR = "white"
@@ -24,7 +24,7 @@ def record_data(rec_params, pipeline=None):
 
 
 def save_raw(raw, rec_params):
-    folder_path = create_session_folder(rec_params['subject_name'])
+    folder_path = create_session_folder(rec_params['subject'])
     raw.save(os.path.join(folder_path, "raw.fif"))
     with open(os.path.join(folder_path, "params.json"), 'w', encoding='utf-8') as f:
         json.dump(rec_params, f, ensure_ascii=False, indent=4)
@@ -59,7 +59,7 @@ def run_session(params, pipeline=None):
 
     # open psychopy window and display starting message
     win = visual.Window(units="norm", color=BG_COLOR, fullscr=params["full_screen"])
-    msg1 = f'Hello {rec_params["subject"]}!\n Hit any key to start, press Esc at any point to exit'
+    msg1 = f'Hello {params["subject"]}!\n Hit any key to start, press Esc at any point to exit'
     loop_through_messages(win, [msg1])
 
     # start recording
