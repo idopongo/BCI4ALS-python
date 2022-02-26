@@ -1,5 +1,5 @@
-from recording.recording import record_data
-from pipeline.pipeline import create_and_fit_pipeline, evaluate_pipeline, get_epochs, \
+from recording import record_data
+from pipeline import create_and_fit_pipeline, evaluate_pipeline, get_epochs, \
     grid_search_pipeline_hyperparams
 
 from data_utils import load_recordings, load_hyperparams, save_hyperparams

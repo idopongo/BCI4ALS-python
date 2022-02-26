@@ -1,7 +1,7 @@
 import mne
-from src.recording.Marker import Marker
-from src.pipeline.preprocessing import Preprocessor, reject_epochs
-from src.pipeline.features import FeatureExtractor
+from Marker import Marker
+from preprocessing import Preprocessor, reject_epochs
+from features import FeatureExtractor
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.model_selection import RepeatedStratifiedKFold, cross_val_score
 from sklearn.pipeline import Pipeline

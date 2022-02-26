@@ -1,4 +1,4 @@
-from recording.board import Board
+from board import Board
 from recording import load_rec_params
 import matplotlib.pyplot as plt
 import numpy as np

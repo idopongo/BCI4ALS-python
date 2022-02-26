@@ -2,12 +2,12 @@ import os
 from constants import *
 import mne
 from pathlib import Path
-from src.recording.Marker import Marker
+from Marker import Marker
 from scipy import signal
 import matplotlib.pyplot as plt
 import numpy as np
 import json
-from pipeline.preprocessing import preprocess
+from preprocessing import preprocess
 from data_utils import get_subject_rec_folders
 
 
