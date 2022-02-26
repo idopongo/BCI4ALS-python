@@ -1,10 +1,10 @@
-from board import Board
+from recording.board import Board
+from recording import load_rec_params
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal
 import scipy.stats
 import mne
-from recording import load_rec_params
 
 
 def health_check():

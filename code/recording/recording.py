@@ -1,51 +1,19 @@
 import numpy as np
-import os
-from datetime import datetime
-from pathlib import Path
 from Marker import Marker
-from constants import *
 from board import Board
-import json
-from pipeline import get_epochs
-from figures import create_and_save_plots
+from ..pipeline.pipeline import get_epochs
+from ..data_utils import load_rec_params, save_raw
 
-from psychopy import visual, core, event
+# from psychopy import visual, core, event
 
 BG_COLOR = "black"
 STIM_COLOR = "white"
-SYNTHETIC_SUBJECT_NAME = "Synthetic"
 
 
 def record_data(rec_params, pipeline=None):
     raw = run_session(rec_params, pipeline)
     folder_path = save_raw(raw, rec_params)
     return raw
-
-
-def save_raw(raw, rec_params):
-    folder_path = create_session_folder(rec_params['subject'])
-    raw.save(os.path.join(folder_path, "raw.fif"))
-    with open(os.path.join(folder_path, "params.json"), 'w', encoding='utf-8') as f:
-        json.dump(rec_params, f, ensure_ascii=False, indent=4)
-    return os.path.basename(folder_path)
-
-
-def create_session_folder(subj):
-    date_str = datetime.now().strftime("%Y-%m-%d--%H-%M-%S")
-    folder_name = f'{date_str}_{subj}'
-    folder_path = os.path.join(RECORDINGS_DIR, folder_name)
-    Path(folder_path).mkdir(exist_ok=True)
-    return folder_path
-
-
-def load_rec_params():
-    with open(RECORDING_PARAMS_PATH) as file:
-        rec_params = json.load(file)
-
-    if rec_params["use_synthetic_board"]:
-        rec_params["subject"] = SYNTHETIC_SUBJECT_NAME
-
-    return rec_params
 
 
 def run_session(params, pipeline=None):

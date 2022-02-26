@@ -2,13 +2,13 @@ import os
 from constants import *
 import mne
 from pathlib import Path
-from Marker import Marker
+from recording.Marker import Marker
 from scipy import signal
 import matplotlib.pyplot as plt
 import numpy as np
 import json
-from preprocessing import preprocess
-from pipeline import get_subject_rec_folders
+from pipeline.preprocessing import preprocess
+from data_utils import get_subject_rec_folders
 
 
 def create_and_save_plots(rec_folder_name, bad_electrodes=[]):

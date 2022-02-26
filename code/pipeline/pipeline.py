@@ -1,17 +1,13 @@
 import mne
-from Marker import Marker
-import os
-import json
-from preprocessing import Preprocessor, reject_epochs, find_average_voltage
+from ..recording.Marker import Marker
+from preprocessing import Preprocessor, reject_epochs
 from features import FeatureExtractor
-import scipy.io
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.model_selection import RepeatedStratifiedKFold, cross_val_score
 from sklearn.pipeline import Pipeline
 import numpy as np
-from constants import *
 from sklearn.model_selection import GridSearchCV
-import pickle
+from ..data_utils import load_recordings
 
 DEFAULT_HYPERPARAMS = {
     "preprocessing__epoch_tmin": 1,
@@ -63,31 +59,6 @@ def create_csp_pipeline(hyperparams=DEFAULT_HYPERPARAMS):
     return pipeline
 
 
-def save_pipeline(pipeline, name):
-    save_path = os.path.join(PIPELINES_DIR, f'pipeline_{name}.pickle')
-    with open(save_path, "wb") as file:
-        pickle.dump(pipeline, file)
-
-
-def load_pipeline(name):
-    load_path = os.path.join(PIPELINES_DIR, f'pipeline_{name}.pickle')
-    with open(load_path, "rb") as file:
-        pipeline = pickle.load(file)
-    return pipeline
-
-
-def save_hyperparams(hyperparams, subject):
-    filename = os.path.join(HYPERPARAMS_DIR, f'{subject}_hyperparams.json')
-    with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(hyperparams, f, ensure_ascii=False, indent=4)
-
-
-def load_hyperparams(subject):
-    with open(os.path.join(PIPELINES_DIR, f'{subject}_hyperparams.json')) as file:
-        hyperparams = json.load(file)
-    return hyperparams
-
-
 def grid_search_pipeline_hyperparams(epochs, labels):
     pipeline = create_csp_pipeline()
     gridsearch_params = {
@@ -119,23 +90,6 @@ def get_epochs(raw, trial_duration, markers=Marker.all(), reject_bad=False):
         epochs_data, labels = reject_epochs(epochs_data, labels)
 
     return epochs_data, labels
-
-
-def load_recordings(subj):
-    subj_recs = get_subject_rec_folders(subj)
-    raws = [mne.io.read_raw_fif(os.path.join(RECORDINGS_DIR, rec, 'raw.fif')) for rec in subj_recs]
-
-    # When multiple recordings are loaded, the recording_params.json is taken from the first recording
-    with open(os.path.join(RECORDINGS_DIR, subj_recs[0], 'params.json')) as file:
-        rec_params = json.load(file)
-    all_raw = mne.io.concatenate_raws(raws)
-    return all_raw, rec_params
-
-
-def get_subject_rec_folders(subj):
-    recs = os.listdir(RECORDINGS_DIR)
-    subj_recs = [rec for rec in recs if rec.split("_")[1] == subj]
-    return subj_recs
 
 
 if __name__ == "__main__":

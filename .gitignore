@@ -1,4 +1,4 @@
 .idea/*
 __pycache__/*
-recording_params.json
+code/recording/recording_params.json
 venv/*

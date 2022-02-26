@@ -1,6 +1,8 @@
-from recording import record_data, load_rec_params
-from pipeline import create_and_fit_pipeline, evaluate_pipeline, load_recordings, get_epochs, \
-    grid_search_pipeline_hyperparams, save_hyperparams, load_hyperparams
+from recording.recording import record_data
+from pipeline.pipeline import create_and_fit_pipeline, evaluate_pipeline, get_epochs, \
+    grid_search_pipeline_hyperparams
+
+from data_utils import load_recordings, load_hyperparams, save_hyperparams
 
 
 def record_and_create_pipeline(rec_params):
@@ -31,5 +33,4 @@ def find_best_hyperparams_for_subject(subject):
 
 
 if __name__ == "__main__":
-    rec_params = load_rec_params()
-    record_create_pipeline_to_online(rec_params)
+    create_pipeline_for_subject("Haggai")

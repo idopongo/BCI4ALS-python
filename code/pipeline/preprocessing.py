@@ -1,7 +1,7 @@
 import mne
 import numpy as np
 
-from board import EEG_CHAN_NAMES
+from ..recording.board import EEG_CHAN_NAMES
 
 LAPLACIAN = {
     "C3": ["FC5", "FC1", "CP5", "CP1"],
