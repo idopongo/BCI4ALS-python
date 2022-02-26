@@ -22,7 +22,7 @@ def health_check():
             errors_by_chan = check_chan_health(data)
             update_chan_plots(chan_plots, data, window_size)
             update_montage_plot(montage_plot, errors_by_chan, chan_error_texts)
-            # update_psd_plot(psd_plots, data, fs)
+            update_psd_plot(psd_plots, data, fs)
             plt.draw()
             plt.pause(1e-3)
 
