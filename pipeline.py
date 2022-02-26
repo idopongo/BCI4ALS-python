@@ -76,7 +76,7 @@ def load_pipeline(name):
 
 
 def save_hyperparams(hyperparams, subject):
-    filename = os.path.join(PIPELINES_DIR, f'{subject}_hyperparams.json')
+    filename = os.path.join(HYPERPARAMS_DIR, f'{subject}_hyperparams.json')
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(hyperparams, f, ensure_ascii=False, indent=4)
 
@@ -133,23 +133,6 @@ def get_subject_rec_folders(subj):
     recs = os.listdir(RECORDINGS_DIR)
     subj_recs = [rec for rec in recs if rec.split("_")[1] == subj]
     return subj_recs
-
-
-def matlab_data_pipeline():
-    data = scipy.io.loadmat("recordings/matlab_data/EEG.mat")["EEG"]
-    data = np.moveaxis(data, [0, 1, 2], [1, 2, 0])
-    labels = scipy.io.loadmat("recordings/matlab_data/trainingVec.mat")["trainingVec"][0]
-    ch_names = ['FC3', 'FCz', 'FC4', 'C5', 'C3', 'C1', 'Cz', 'C2', 'C4', 'C6', 'CP3', 'CP1', 'CPz', 'CP2', 'CP4', 'Fz']
-    ch_types = ['eeg'] * 16
-    sampling_freq = 500
-    info = mne.create_info(ch_names, ch_types=ch_types, sfreq=sampling_freq)
-    events = np.column_stack((np.arange(0, len(labels) * 500, sampling_freq),
-                              np.zeros(len(labels), dtype=int),
-                              labels))
-    epochs = mne.EpochsArray(data, info, events=events)
-    features = get_features(epochs.get_data())
-    clf, acc = create_classifier(features, labels)
-    print(f'k-fold validation accuracy: {np.mean(acc)}')
 
 
 if __name__ == "__main__":
