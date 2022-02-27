@@ -139,4 +139,5 @@ def check_chan_health(data):
     return errors_by_chan
 
 
-health_check()
+if __name__ == "__main__":
+    health_check()

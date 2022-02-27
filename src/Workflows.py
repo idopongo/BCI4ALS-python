@@ -37,9 +37,16 @@ def find_best_hyperparams_for_subject(subject=None, pipeline_type="spectral", ch
     save_hyperparams(best_hyperparams, subject)
 
 
-if __name__ == "__main__":
-    raw, rec_params = load_recordings("Synthetic")
+def record_online(subject, pipeline_type="spectral"):
+    raw, rec_params = load_recordings(subject)
     epochs, labels = get_epochs(raw, rec_params["trial_duration"])
-    pipeline = create_pipeline_for_subject("David5", pipeline_type="csp")
     rec_params = load_rec_params()
+    pipeline = create_pipeline_for_subject(subject)
     record_data(rec_params, pipeline=pipeline, live_retraining=True, epochs=epochs, labels=labels)
+    create_pipeline_for_subject(subject, pipeline_type=pipeline_type)
+
+
+if __name__ == "__main__":
+    # record_online("Ido6", pipeline_type="csp")
+    # find_best_hyperparams_for_subject("Ido6", pipeline_type="csp")
+    find_best_hyperparams_for_subject("Ido6", pipeline_type="csp", choose=True)
