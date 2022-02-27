@@ -3,9 +3,9 @@ from Marker import Marker
 from board import Board
 
 from pipeline import get_epochs, create_and_fit_pipeline, evaluate_pipeline
-from src.data_utils import load_rec_params, save_raw, load_pipeline
-
-# from psychopy import visual, core, event
+from data_utils import load_rec_params, save_raw, load_pipeline
+from psychopy import visual, core, event, sound
+import os
 
 BG_COLOR = "black"
 STIM_COLOR = "white"
@@ -36,13 +36,13 @@ def run_session(params, pipeline=None, live_retraining=False):
         for i, marker in enumerate(trial_markers):
             # "get ready" period
             show_stim_for_duration(win, progress_text(win, i + 1, len(trial_markers), marker),
-                                   params["get_ready_duration"])
+                                   progress_sound(marker), params["get_ready_duration"])
             # calibration period
             core.wait(params["calibration_duration"])
 
             # motor imagery period
             board.insert_marker(marker)
-            show_stim_for_duration(win, marker_stim(win, marker), params["trial_duration"])
+            show_stim_with_beeps(win, marker_stim(win, marker), params["trial_duration"])
 
             if pipeline:
                 # We need to wait a short time between the end of the trial and trying to get it's data to make sure
@@ -57,20 +57,17 @@ def run_session(params, pipeline=None, live_retraining=False):
                 prediction = pipeline.predict(epochs)[-1]
 
                 # display prediction result
+
                 txt = classification_result_txt(win, marker, prediction)
                 show_stim_for_duration(win, txt, params["display_online_result_duration"])
 
-            if live_retraining and (i % 5) == 0:
-                text_stim("Retraining classifier, please wait :)")
-                new_pipeline = create_and_fit_pipeline(raw, recording_params=rec_params)
-                accuracy = evaluate_pipeline(new_pipeline)
-                if accuracy > best_accuracy:
-                    best_accuracy = accuracy
-                    pipeline = new_pipeline
+                show_stim_for_duration(win, classification_result_txt(win, marker, prediction),
+                                       classification_result_sound(marker, prediction),
+                                       params["display_online_result_duration"])
 
-        core.wait(0.5)
-        win.close()
-        return board.get_data()
+                core.wait(0.5)
+                win.close()
+                return board.get_data()
 
 
 def loop_through_messages(win, messages):
@@ -89,12 +86,13 @@ def marker_stim(win, marker):
     return shape
 
 
-def show_stim_for_duration(win, stim, duration):
+def show_stim_for_duration(win, vis_stim, aud_stim, duration):
     # Adding this code here is an easy way to make sure we check for an escape event before showing every stimulus
     if 'escape' in event.getKeys():
         core.quit()
 
-    stim.draw()  # draw stim on back buffer
+    vis_stim.draw()  # draw stim on back buffer
+    aud_stim.play()
     win.flip()  # flip the front and back buffers and then clear the back buffer
     core.wait(duration)
     win.flip()  # flip back to the (now empty) back buffer
@@ -102,12 +100,41 @@ def show_stim_for_duration(win, stim, duration):
 
 def text_stim(win, text):
     txt = visual.TextStim(win=win, text=text, color=STIM_COLOR, bold=True, alignHoriz='center', alignVert='center')
+
+
+def show_stim_with_beeps(win, vis_stim, duration):
+    # Adding this code here is an easy way to make sure we check for an escape event before showing every stimulus
+    if 'escape' in event.getKeys():
+        core.quit()
+
+    vis_stim.draw()  # draw stim on back buffer
+    sound.Sound("a", secs=0.1).play()
+    win.flip()  # flip the front and back buffers and then clear the back buffer
+    core.wait(duration)
+    sound.Sound("c", secs=0.1).play()
+    win.flip()  # flip back to the (now empty) back buffer
+
+
+def progress_text(win, done, total, stim):
+    txt = visual.TextStim(win=win, text=f'trial {done}/{total}\n get ready for {Marker(stim).name}', color=STIM_COLOR,
+                          bold=True, alignHoriz='center', alignVert='center')
+
     txt.font = 'arial'
     return txt
 
 
 def progress_text(win, done, total, stim):
     return text_stim(win, f'trial {done}/{total}\n get ready for {Marker(stim).name}')
+
+
+def progress_sound(stim):
+    return sound.Sound(os.path.join("../audio", f"{Marker(stim).name}.ogg"))
+
+
+def classification_result_sound(marker, prediction):
+    if marker == prediction:
+        return sound.Sound(os.path.join("../audio", "good job!.ogg"))
+    return sound.Sound(os.path.join("../audio", "try again.ogg"))
 
 
 def classification_result_txt(win, marker, prediction):

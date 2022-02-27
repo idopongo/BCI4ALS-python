@@ -47,6 +47,8 @@ def create_and_fit_pipeline(raw, recording_params, hyperparams=DEFAULT_HYPERPARA
 
 
 def create_pipeline(hyperparams=DEFAULT_HYPERPARAMS, pipeline_type="spectral"):
+    if hyperparams is None:
+        hyperparams = DEFAULT_HYPERPARAMS
     lda = LinearDiscriminantAnalysis()
     if pipeline_type == "spectral":
         pipeline = Pipeline(
