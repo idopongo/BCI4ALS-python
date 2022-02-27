@@ -4,8 +4,9 @@ from Marker import Marker
 from board import Board
 
 from pipeline import get_epochs, create_pipeline, evaluate_pipeline
-from data_utils import load_rec_params, save_raw, load_pipeline, load_recordings
+from data_utils import load_rec_params, save_raw, load_pipeline, load_recordings, load_hyperparams
 from psychopy import visual, core, event, sound
+
 import os
 
 BG_COLOR = "black"
@@ -41,8 +42,10 @@ def run_session(params, pipeline=None, live_retraining=False, epochs=None, label
     msg1 = f'Hello {params["subject"]}!\n Hit any key to start, press Esc at any point to exit'
     loop_through_messages(win, [msg1])
 
-    # start recording
     best_score = 0
+    hyperparams = load_hyperparams(params["subject"], pipeline_type="csp")
+
+    # Start recording
     with Board(use_synthetic=params["use_synthetic_board"]) as board:
         for i, marker in enumerate(trial_markers):
             # "get ready" period
@@ -63,7 +66,6 @@ def run_session(params, pipeline=None, live_retraining=False, epochs=None, label
 
                 # get latest epoch and make prediction
                 raw = board.get_data()
-                print(len(raw))
                 new_epochs, new_labels = get_epochs(raw, params["trial_duration"], on_missing='ignore')
                 prediction = pipeline.predict(new_epochs)[-1]
 
@@ -72,28 +74,28 @@ def run_session(params, pipeline=None, live_retraining=False, epochs=None, label
                                        classification_result_sound(marker, prediction),
                                        params["display_online_result_duration"])
 
-            if live_retraining and i != 0 and i % params["retrain_num"] == 0:
+            if live_retraining and i % params["retrain_num"] == 0:
                 text_stim(win, "Retraining model, please wait...").draw()
                 win.flip()
 
                 # train new pipeline
                 total_epochs = np.concatenate((epochs, new_epochs), axis=0)
                 total_labels = np.concatenate((labels, new_labels), axis=0)
-                new_pipeline = create_pipeline(pipeline_type="csp")
+                new_pipeline = create_pipeline(hyperparams=hyperparams, pipeline_type="csp")
                 new_pipeline.fit(total_epochs, total_labels)
 
                 # evaluate new pipeline
                 score = evaluate_pipeline(new_pipeline, total_epochs, total_labels)
                 msg = f'Finished retraining \nold model score: {best_score} \nnew model score: {score}'
                 win.flip()
+                pipeline = new_pipeline
 
                 # If new pipeline is better, it becomes the next pipeline.
                 if score > best_score:
                     best_score = score
-                    pipeline = new_pipeline
                     msg += "\nNice! the model has improved!"
                 else:
-                    msg += "\nNo improvement, let's stay with the old model for now :)"
+                    msg += "\nNo improvement, Focus man.."
                 msg += "\n Press any key to continue, ESC to exit"
                 text_stim(win, msg).draw()
                 win.flip()
@@ -188,10 +190,9 @@ def classification_result_txt(win, marker, prediction):
 def marker_image(win, marker):
     return visual.ImageStim(win=win, image=Marker(marker).image_path, units="norm", size=2, color=(1, 1, 1))
 
-
-if __name__ == "__main__":
-    raw, rec_params = load_recordings("Synthetic")
-    epochs, labels = get_epochs(raw, rec_params["trial_duration"])
-    pipeline = create_pipeline_for_subject("David5", pipeline_type="csp")
-    rec_params = load_rec_params()
-    record_data(rec_params, pipeline=pipeline, live_retraining=True, epochs=epochs, labels=labels)
+# if __name__ == "__main__":
+# raw, rec_params = load_rec ordings("Synthetic")
+# epochs, labels = get_epochs(raw, rec_params["trial_duration"])
+# pipeline = create_pipeline_for_subject("David5", pipeline_type="csp")
+# rec_params = load_rec_params()
+# record_data(rec_params, pipeline=pipeline, live_retraining=True, epochs=epochs, labels=labels)
