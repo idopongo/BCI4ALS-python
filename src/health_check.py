@@ -5,6 +5,7 @@ import numpy as np
 import scipy.signal
 import scipy.stats
 import mne
+from preprocessing import get_average_corr
 
 
 def health_check():
@@ -136,18 +137,6 @@ def check_chan_health(data):
                 errors.append("amplitude too low")
             errors_by_chan[i] = errors
     return errors_by_chan
-
-
-def get_average_corr(chan, all_chans):
-    total_corr = 0
-    for other_chan in all_chans:
-        if len(chan) != len(other_chan) or len(chan) < 2 or len(other_chan) < 2:
-            continue
-        corr, _ = scipy.stats.pearsonr(chan, other_chan)
-        if not np.isnan(corr):
-            total_corr += corr
-    avg_corr = total_corr / len(all_chans)
-    return avg_corr
 
 
 health_check()

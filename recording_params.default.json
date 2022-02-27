@@ -6,5 +6,6 @@
   "trials_per_stim": 1,
   "get_ready_duration": 3,
   "calibration_duration": 1,
-  "display_online_result_duration": 2
+  "display_online_result_duration": 2,
+  "retrain_num": 20
 }

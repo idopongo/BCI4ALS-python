@@ -114,7 +114,9 @@ def load_hyperparams(subject, pipeline_type="spectral"):
         print("Multiple hyperparam files found, taking most recent")
 
     latest_hyperparams = subj_hyperparams[-1]
-    return json_load(os.path.join(HYPERPARAMS_DIR, latest_hyperparams))
+    hyperparams = json_load(os.path.join(HYPERPARAMS_DIR, latest_hyperparams))
+    print(json.dumps(hyperparams, indent=4))
+    return hyperparams
 
 
 def json_load(load_path):

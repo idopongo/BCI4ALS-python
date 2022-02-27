@@ -1,8 +1,8 @@
 import mne
 import numpy as np
-from health_check import get_average_corr
 
 from board import EEG_CHAN_NAMES
+import scipy.stats
 
 LAPLACIAN = {
     "C3": ["FC5", "FC1", "CP5", "CP1"],
@@ -87,3 +87,15 @@ def find_average_voltage(epochs):
     for chan_inx in range(len(epochs[0, :, 0])):
         vol_per_chan[chan_inx + 1] = np.mean(epochs[:, chan_inx, :])
     return vol_per_chan
+
+
+def get_average_corr(chan, all_chans):
+    total_corr = 0
+    for other_chan in all_chans:
+        if len(chan) != len(other_chan) or len(chan) < 2 or len(other_chan) < 2:
+            continue
+        corr, _ = scipy.stats.pearsonr(chan, other_chan)
+        if not np.isnan(corr):
+            total_corr += corr
+    avg_corr = total_corr / len(all_chans)
+    return avg_corr

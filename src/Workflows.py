@@ -2,7 +2,7 @@ from recording import record_data
 from pipeline import create_and_fit_pipeline, evaluate_pipeline, get_epochs, \
     grid_search_pipeline_hyperparams
 
-from data_utils import load_recordings, load_hyperparams, save_hyperparams, load_rec_params
+from data_utils import load_recordings, load_hyperparams, save_hyperparams, load_rec_params, load_pipeline
 
 
 def record_and_create_pipeline(rec_params):
@@ -38,6 +38,8 @@ def find_best_hyperparams_for_subject(subject=None, pipeline_type="spectral", ch
 
 
 if __name__ == "__main__":
-    pipeline = create_pipeline_for_subject("Avigail")
+    raw, rec_params = load_recordings("Synthetic")
+    epochs, labels = get_epochs(raw, rec_params["trial_duration"])
+    pipeline = create_pipeline_for_subject("David5", pipeline_type="csp")
     rec_params = load_rec_params()
-    # record_data(rec_params, pipeline)
+    record_data(rec_params, pipeline=pipeline, live_retraining=True, epochs=epochs, labels=labels)

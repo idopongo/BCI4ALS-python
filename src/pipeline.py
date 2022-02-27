@@ -8,6 +8,7 @@ from sklearn.pipeline import Pipeline
 import numpy as np
 from sklearn.model_selection import GridSearchCV
 from src.data_utils import load_recordings
+from sklearn.svm import SVC
 
 mne.set_log_level('warning')
 
@@ -17,20 +18,19 @@ DEFAULT_HYPERPARAMS = {
     "preprocessing__h_freq": 24,
     "feature_extraction__n_fft": 125,
     "feature_extraction__n_per_seg": 120,
-    "feature_extraction__n_overlap": 0.3,
+    "feature_extraction__n_overlap": 50,
     "feature_extraction__freq_bands": [8, 12, 30],
     "CSP__n_components": 5,
 }
 
 
-def evaluate_pipeline(pipeline, epochs, labels):
-    n_splits = 3
-    n_repeats = 10
-    print(f'Evaluating pipeline performance ({n_splits} splits, {n_repeats} repeats)...')
+def evaluate_pipeline(pipeline, epochs, labels, n_splits=3, n_repeats=10):
+    print(f'Evaluating pipeline performance ({n_splits} splits, {n_repeats} repeats, {len(labels)} epochs)...')
     skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats)
     scores = cross_val_score(pipeline, epochs, labels, cv=skf)
     print(
         f'Accuracy: \n mean: {np.round(np.mean(scores), 2)} \n std: {np.round(np.std(scores), 3)}')
+    return np.round(np.mean(scores), 2)
 
 
 def create_and_fit_pipeline(raw, recording_params, hyperparams=DEFAULT_HYPERPARAMS,
@@ -47,6 +47,7 @@ def create_and_fit_pipeline(raw, recording_params, hyperparams=DEFAULT_HYPERPARA
 def create_pipeline(hyperparams=DEFAULT_HYPERPARAMS, pipeline_type="spectral"):
     if hyperparams is None:
         hyperparams = DEFAULT_HYPERPARAMS
+    hyperparams = {**DEFAULT_HYPERPARAMS, **hyperparams}
     lda = LinearDiscriminantAnalysis()
     if pipeline_type == "spectral":
         pipeline = Pipeline(
@@ -74,14 +75,17 @@ def show_pipeline_steps(pipeline):
 def grid_search_pipeline_hyperparams(epochs, labels, pipeline_type):
     pipeline = create_pipeline(pipeline_type=pipeline_type)
     gridsearch_params = {
-        "preprocessing__epoch_tmin": [0.1, 1],
-        "preprocessing__l_freq": [2, 5, 7],
-        "preprocessing__h_freq": [24, 28],
+        "preprocessing__epoch_tmin": [0],
+        "preprocessing__l_freq": [3, 5, 7],
+        "preprocessing__h_freq": [20, 24, 28, 30],
         "feature_extraction__n_fft": [250],
         "feature_extraction__n_per_seg": [120],
-        "feature_extraction__n_overlap": [0],
-        "feature_extraction__freq_bands": [[11, 30], [8, 12, 30]],
-        "CSP__n_components": [5, 6, 7, 8]
+        "feature_extraction__n_overlap": [0.2],
+        "feature_extraction__freq_bands": [[7, 12, 28]],
+        "CSP__n_components": [4, 5, 6, 7, 8, 9],
+        # "lda__C": [0.1, 1, 10, 100],
+        # "lda__gamma": [1, 0.1, 0.01, 0.001],
+        # "lda__kernel": ['rbf', 'poly', 'sigmoid']
     }
     gridsearch_params = filter_hyperparams_for_pipeline(gridsearch_params, pipeline)
     skf = RepeatedStratifiedKFold(n_splits=3, n_repeats=5)
@@ -94,9 +98,10 @@ def grid_search_pipeline_hyperparams(epochs, labels, pipeline_type):
     return gs.best_params_
 
 
-def get_epochs(raw, trial_duration, markers=Marker.all(), reject_bad=False):
+def get_epochs(raw, trial_duration, markers=Marker.all(), reject_bad=False, on_missing='raise'):
     events = mne.find_events(raw)
-    epochs = mne.Epochs(raw, events, markers, tmin=-1, tmax=trial_duration, picks="data", baseline=(-1, 0))
+    epochs = mne.Epochs(raw, events, markers, tmin=-1, tmax=trial_duration, picks="data", baseline=(-1, 0),
+                        on_missing=on_missing)
 
     # running get data triggers dropping of epochs, we want to make sure this happens now so that the labels are
     # consistent with the epochs
@@ -104,8 +109,8 @@ def get_epochs(raw, trial_duration, markers=Marker.all(), reject_bad=False):
     labels = epochs.events[:, -1]
     print(f'Found {len(labels)} epochs')
 
-    if reject_bad:
-        epochs_data, labels = reject_epochs(epochs_data, labels)
+    # if reject_bad:
+    #     epochs_data, labels = reject_epochs(epochs_data, labels)
 
     return epochs_data, labels
 
