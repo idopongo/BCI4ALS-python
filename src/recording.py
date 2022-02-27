@@ -11,6 +11,10 @@ import os
 BG_COLOR = "black"
 STIM_COLOR = "white"
 
+visual = None
+core = None
+event = None
+
 
 def record_data(rec_params, pipeline=None, live_retraining=False, epochs=None, labels=None):
     raw = run_session(rec_params, pipeline, live_retraining, epochs=epochs, labels=labels)
@@ -22,6 +26,12 @@ def run_session(params, pipeline=None, live_retraining=False, epochs=None, label
     """
     Run a recording session, if pipeline is passed display prediction after every epoch
     """
+
+    # import psychopy only here to prevent pygame loading.
+    from psychopy import visual as vis, core as cor, event as eve
+    global visual, core, event
+    visual, core, event = vis, cor, eve
+
     # create list of random trials
     trial_markers = Marker.all() * params["trials_per_stim"]
     np.random.shuffle(trial_markers)
