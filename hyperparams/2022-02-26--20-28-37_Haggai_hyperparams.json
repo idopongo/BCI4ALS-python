@@ -1,0 +1,16 @@
+{
+    "feature_extraction__freq_bands": [
+        7,
+        12,
+        28
+    ],
+    "feature_extraction__n_fft": 250,
+    "feature_extraction__n_overlap": 0.2,
+    "feature_extraction__n_per_seg": 120,
+    "lda__C": 100,
+    "lda__gamma": 1,
+    "lda__kernel": "rbf",
+    "preprocessing__epoch_tmin": 0,
+    "preprocessing__h_freq": 28,
+    "preprocessing__l_freq": 7
+}

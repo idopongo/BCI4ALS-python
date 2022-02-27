@@ -29,9 +29,9 @@ class Preprocessor:
         return self
 
     def transform(self, epochs):
-        epochs = laplacian(epochs)
         epochs = mne.filter.filter_data(epochs, 125, self.l_freq, self.h_freq, verbose=False)
         epochs = epochs[:, :, int(125 * self.epoch_tmin):]
+        epochs = laplacian(epochs)
         return epochs
 
 
@@ -65,13 +65,13 @@ def reject_epochs(epochs, labels):
                 reasons['bad_chans'].append(chan)
                 reasons['reason'].append('amp high')
             all_chan_except = chan_index.remove(chan)
-            average_corr_chan = get_average_corr(chan, epoch[all_chan_except, :])
-            if abs(average_corr_chan) < 0.05:
-                reasons['bad_chans'].append(chan)
-                reasons['reason'].append('corr low')
-            elif abs(average_corr_chan) > 0.9:
-                reasons['bad_chans'].append(chan)
-                reasons['reason'].append('corr high')
+            # average_corr_chan = get_average_corr(curr_chan, epoch[all_chan_except, :])
+            # if abs(average_corr_chan) < 0.05:
+            #     reasons['bad_chans'].append(chan)
+            #     reasons['reason'].append('corr low')
+            # elif abs(average_corr_chan) > 0.9:
+            #     reasons['bad_chans'].append(chan)
+            #     reasons['reason'].append('corr high')
 
         if len(reasons['bad_chans']) > 3:
             bad_epochs[epoch_idx] = reasons
