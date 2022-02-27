@@ -9,6 +9,8 @@ import numpy as np
 from sklearn.model_selection import GridSearchCV
 from src.data_utils import load_recordings
 from sklearn.svm import SVC
+from skopt import BayesSearchCV
+from skopt.space import Real, Categorical, Integer
 
 mne.set_log_level('warning')
 
@@ -17,14 +19,12 @@ DEFAULT_HYPERPARAMS = {
     "preprocessing__l_freq": 2,
     "preprocessing__h_freq": 24,
     "feature_extraction__n_fft": 125,
-    "feature_extraction__n_per_seg": 120,
-    "feature_extraction__n_overlap": 50,
-    "feature_extraction__freq_bands": [8, 12, 30],
+    "feature_extraction__n_per_seg": 100,
     "CSP__n_components": 5,
 }
 
 
-def evaluate_pipeline(pipeline, epochs, labels, n_splits=3, n_repeats=10):
+def evaluate_pipeline(pipeline, epochs, labels, n_splits=5, n_repeats=10):
     print(f'Evaluating pipeline performance ({n_splits} splits, {n_repeats} repeats, {len(labels)} epochs)...')
     skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats)
     scores = cross_val_score(pipeline, epochs, labels, cv=skf)
@@ -72,17 +72,41 @@ def show_pipeline_steps(pipeline):
     return " => ".join(list(pipeline.named_steps.keys()))
 
 
+def bayesian_opt(epochs, labels, pipeline_type):
+    pipeline = create_pipeline(pipeline_type=pipeline_type)
+    # log-uniform: understand as search over p = exp(x) by varying x
+    skf = RepeatedStratifiedKFold(n_splits=5, n_repeats=5)
+
+    opt = BayesSearchCV(
+        pipeline,
+        {
+            "preprocessing__epoch_tmin": Real(0, 2),
+            "preprocessing__l_freq": Real(7, 14),
+            "preprocessing__h_freq": Real(15, 30),
+            "CSP__n_components": [7, 8, 9, 10, 11, 12],
+        },
+        verbose=20,
+        n_iter=45,
+        cv=skf
+    )
+
+    opt.fit(epochs, labels)
+
+    print("Best parameter (CV score=%0.3f):" % opt.best_score_)
+    print(opt.best_params_)
+    return opt.best_params_
+
+
 def grid_search_pipeline_hyperparams(epochs, labels, pipeline_type):
     pipeline = create_pipeline(pipeline_type=pipeline_type)
     gridsearch_params = {
-        "preprocessing__epoch_tmin": [0],
-        "preprocessing__l_freq": [3, 5, 7],
+        "preprocessing__epoch_tmin": [0, 0.2, 0.5, 0.7, 1, 1.5],
+        "preprocessing__l_freq": [3, 5, 7, 10],
         "preprocessing__h_freq": [20, 24, 28, 30],
-        "feature_extraction__n_fft": [250],
-        "feature_extraction__n_per_seg": [120],
-        "feature_extraction__n_overlap": [0.2],
-        "feature_extraction__freq_bands": [[7, 12, 28]],
-        "CSP__n_components": [4, 5, 6, 7, 8, 9],
+        "feature_extraction__n_fft": [65, 130, 200, 250],
+        "feature_extraction__n_per_seg": [375 / 3, 375 / 5, 375 / 7],
+        "feature_extraction__freq_bands": [[8, 13, 30], [5, 10, 20, 40], [5, 10, 24]],
+        "CSP__n_components": [5, 6, 7, 8, 9],
         # "lda__C": [0.1, 1, 10, 100],
         # "lda__gamma": [1, 0.1, 0.01, 0.001],
         # "lda__kernel": ['rbf', 'poly', 'sigmoid']
@@ -98,7 +122,7 @@ def grid_search_pipeline_hyperparams(epochs, labels, pipeline_type):
     return gs.best_params_
 
 
-def get_epochs(raw, trial_duration, markers=Marker.all(), reject_bad=False, on_missing='raise'):
+def get_epochs(raw, trial_duration, markers=Marker.all(), reject_bad=True, on_missing='raise'):
     events = mne.find_events(raw)
     epochs = mne.Epochs(raw, events, markers, tmin=-1, tmax=trial_duration, picks="data", baseline=(-1, 0),
                         on_missing=on_missing)
@@ -109,8 +133,8 @@ def get_epochs(raw, trial_duration, markers=Marker.all(), reject_bad=False, on_m
     labels = epochs.events[:, -1]
     print(f'Found {len(labels)} epochs')
 
-    # if reject_bad:
-    #     epochs_data, labels = reject_epochs(epochs_data, labels)
+    if reject_bad:
+        epochs_data, labels = reject_epochs(epochs_data, labels)
 
     return epochs_data, labels
 

@@ -4,7 +4,6 @@ import datetime
 from src.constants import *
 from pathlib import Path
 from tkfilebrowser import askopendirnames
-from tkinter import Tk
 import mne
 import pickle
 
