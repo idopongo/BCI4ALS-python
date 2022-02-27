@@ -17,12 +17,12 @@ def record_create_pipeline_to_online(rec_params):
     record_data(rec_params, pipeline)
 
 
-def create_pipeline_for_subject(subject, pipeline_type="spectral"):
+def create_pipeline_for_subject(subject, pipeline_type="spectral", choose=False):
     """
     Create pipline of type in: ["spectral", "csp"]
     """
     print(f'Creating pipeline for subject {subject}...')
-    raw, rec_params = load_recordings(subject)
+    raw, rec_params = load_recordings(subject, choose)
     hyperparams = load_hyperparams(subject)
     pipeline, epochs, labels = create_and_fit_pipeline(raw, rec_params, hyperparams=hyperparams,
                                                        pipeline_type=pipeline_type)
@@ -30,8 +30,8 @@ def create_pipeline_for_subject(subject, pipeline_type="spectral"):
     return pipeline
 
 
-def find_best_hyperparams_for_subject(subject, pipeline_type="spectral"):
-    raw, rec_params = load_recordings(subject)
+def find_best_hyperparams_for_subject(subject=None, pipeline_type="spectral", choose=False):
+    raw, rec_params = load_recordings(subject, choose)
     epochs, labels = get_epochs(raw, rec_params['trial_duration'], reject_bad=not rec_params['use_synthetic_board'])
     best_hyperparams = grid_search_pipeline_hyperparams(epochs, labels, pipeline_type)
     save_hyperparams(best_hyperparams, subject)
