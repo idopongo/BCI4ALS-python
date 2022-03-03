@@ -22,7 +22,7 @@ def health_check():
             errors_by_chan = check_chan_health(data)
             update_chan_plots(chan_plots, data, window_size)
             update_montage_plot(montage_plot, errors_by_chan, chan_error_texts)
-            # update_psd_plot(psd_plots, data, fs)
+            update_psd_plot(psd_plots, data, fs)
             plt.draw()
             plt.pause(1e-3)
 
@@ -36,15 +36,15 @@ def plot_psd(ax, chan_names):
         ax.set_ylabel('Power')
         ax.set_xlabel('Frequency [Hz]')
         ax.grid(True)
-        ax.set_ylim(0, 7000)
-        ax.set_xlim(0, 80)
+        ax.set_ylim(-30, 100)
+        ax.set_xlim(0, 60)
     return chan_lines
 
 
 def update_psd_plot(psd_plots, data, sfreq):
     for plot, chan in zip(psd_plots, data):
         freq, power = scipy.signal.welch(chan, sfreq, nperseg=sfreq, scaling="density")
-        plot.set_data(freq, power)
+        plot.set_data(freq, 10 * np.log10(power))
 
 
 def on_press(event):
@@ -65,6 +65,7 @@ def plot_chans(chan_names, window_size, ax):
     chan_plots = []
     t = np.zeros(0)
     V = np.zeros(0)
+
     for i, chan_name in enumerate(chan_names):
         chan_plots.append(ax[i].plot(t, V)[0])
         ax[i].set_ylim(-50, 50)
@@ -73,12 +74,16 @@ def plot_chans(chan_names, window_size, ax):
         ax[i].set_yticks([])
         ax[i].text(-0.1, 0.5, f'{str(chan_name)} ({str(i + 1)})', horizontalalignment='center',
                    verticalalignment='center', transform=ax[i].transAxes)
+        ax[i].legend(title='avr vol', title_fontsize='small', loc='upper right')
     return chan_plots
 
 
 def update_chan_plots(chan_plots, data, window_size):
+    # chan_inx = list(range(len(chan_plots)))
     for plot, chan in zip(chan_plots, data):
+        # avr_vol = np.mean(chan)
         t = np.linspace(0, window_size, len(chan))
+        # ax[i].legend(title=f'avr vol={avr_vol}', title_fontsize='small', loc='upper right')
         plot.set_data(t, chan)
 
 
@@ -132,7 +137,7 @@ def check_chan_health(data):
                 errors.append("avg corr too high")
             if max > 300:
                 errors.append("amplitude too high")
-            if max < 10:
+            if max < 5:
                 errors.append("amplitude too low")
             errors_by_chan[i] = errors
     return errors_by_chan
