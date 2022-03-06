@@ -51,14 +51,12 @@ def get_subject_rec_folders(subj):
     return subj_recs
 
 
-def load_recordings(subj, choose=False):
+def load_recordings(subj="", choose=False):
     """
     Load all the recordings, all from the most recent day.
     """
     if choose:
-        # root = Tk()
         subj_recs_recent = askopendirnames(initialdir=RECORDINGS_DIR)
-        # root.destroy()
     else:
         print(f'Loading recordings for subject {subj}...')
         subj_recs = get_subject_rec_folders(subj)
@@ -78,8 +76,7 @@ def load_recordings(subj, choose=False):
     with open(os.path.join(RECORDINGS_DIR, subj_recs_recent[0], 'params.json')) as file:
         rec_params = json.load(file)
 
-    all_raw = mne.io.concatenate_raws(raws)
-    return all_raw, rec_params
+    return raws, rec_params
 
 
 def save_pipeline(pipeline, subject):
@@ -100,7 +97,7 @@ def save_hyperparams(hyperparams, subject):
     json_dump(hyperparams, save_path)
 
 
-def load_hyperparams(subject, pipeline_type="spectral"):
+def load_hyperparams(subject):
     print(f'Loading hyperparams for subject {subject}...')
     all_hyperparams = os.listdir(HYPERPARAMS_DIR)
     subj_hyperparams = sorted([p for p in all_hyperparams if p.split("_")[1] == subject])

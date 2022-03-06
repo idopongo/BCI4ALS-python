@@ -20,7 +20,7 @@ class Board:
             self.board_id = BoardIds.CYTON_DAISY_BOARD
             params.serial_port = find_serial_port()
         board = BoardShim(self.board_id, params)
-
+        board.enable_dev_board_logger()
         self.brainflow_board = board
 
     def __enter__(self):

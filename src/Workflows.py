@@ -1,52 +1,52 @@
-from recording import record_data
-from pipeline import create_and_fit_pipeline, evaluate_pipeline, get_epochs, \
-    grid_search_pipeline_hyperparams
+from recording import run_session
+from pipeline import evaluate_pipeline, get_epochs, bayesian_opt
+from data_utils import load_recordings, load_hyperparams, save_hyperparams, load_rec_params
+import spectral
+import csp
 
-from data_utils import load_recordings, load_hyperparams, save_hyperparams, load_rec_params, load_pipeline
 
-
-def record_and_create_pipeline(rec_params):
-    raw = record_data(rec_params)
-    pipeline, epochs, labels = create_and_fit_pipeline(raw, rec_params)
-    evaluate_pipeline(pipeline, epochs, labels)
+def record_and_create_pipeline(pipeline=spectral):
+    rec_params = load_rec_params()
+    run_session(rec_params)
+    create_pipeline_for_subject(rec_params["subject"], pipeline)
     return pipeline
 
 
-def record_create_pipeline_to_online(rec_params):
-    pipeline = record_and_create_pipeline(rec_params)
-    record_data(rec_params, pipeline)
-
-
-def create_pipeline_for_subject(subject, pipeline_type="spectral", choose=False):
+def create_pipeline_for_subject(subject, pipeline=spectral, choose=False):
     """
     Create pipline of type in: ["spectral", "csp"]
     """
     print(f'Creating pipeline for subject {subject}...')
-    raw, rec_params = load_recordings(subject, choose)
+    epochs, labels = load_epochs_for_subject(subject, choose)
     hyperparams = load_hyperparams(subject)
-    pipeline, epochs, labels = create_and_fit_pipeline(raw, rec_params, hyperparams=hyperparams,
-                                                       pipeline_type=pipeline_type)
-    evaluate_pipeline(pipeline, epochs, labels)
-    return pipeline
+
+    pipe = pipeline.create_pipeline(hyperparams)
+    pipe.fit(epochs, labels)
+
+    evaluate_pipeline(pipe, epochs, labels)
+    return pipe
 
 
-def find_best_hyperparams_for_subject(subject=None, pipeline_type="spectral", choose=False):
-    raw, rec_params = load_recordings(subject, choose)
-    epochs, labels = get_epochs(raw, rec_params['trial_duration'], reject_bad=not rec_params['use_synthetic_board'])
-    best_hyperparams = grid_search_pipeline_hyperparams(epochs, labels, pipeline_type)
+def find_best_hyperparams_for_subject(subject=None, pipeline=spectral, choose=False):
+    epochs, labels = load_epochs_for_subject(subject, choose)
+    best_hyperparams = bayesian_opt(epochs, labels, pipeline)
     save_hyperparams(best_hyperparams, subject)
 
 
-def record_online(subject, pipeline_type="spectral"):
-    raw, rec_params = load_recordings(subject)
-    epochs, labels = get_epochs(raw, rec_params["trial_duration"])
+def record_with_live_retraining(subject, pipeline=spectral, choose=False):
+    epochs, labels = load_epochs_for_subject(subject, choose=choose)
     rec_params = load_rec_params()
-    pipeline = create_pipeline_for_subject(subject)
-    record_data(rec_params, pipeline=pipeline, live_retraining=True, epochs=epochs, labels=labels)
-    create_pipeline_for_subject(subject, pipeline_type=pipeline_type)
+    run_session(rec_params, pipeline=pipeline, live_retraining=True, epochs=epochs, labels=labels)
+    create_pipeline_for_subject(rec_params["subject"], pipeline=pipeline)
+
+
+def load_epochs_for_subject(subject, choose=False):
+    raws, rec_params = load_recordings(subject, choose)
+    epochs, labels = get_epochs(raws, rec_params["trial_duration"], rec_params["calibration_duration"],
+                                reject_bad=not rec_params['use_synthetic_board'])
+    return epochs, labels
 
 
 if __name__ == "__main__":
-    # record_online("Ido6", pipeline_type="csp")
-    # find_best_hyperparams_for_subject("Ido6", pipeline_type="csp")
-    find_best_hyperparams_for_subject("Ido6", pipeline_type="csp", choose=True)
+    # create_pipeline_for_subject("David7", pipeline=csp)
+    create_pipeline_for_subject("Ori2", pipeline=csp)

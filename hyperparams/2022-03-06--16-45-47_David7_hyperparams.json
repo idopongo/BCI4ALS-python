@@ -1,0 +1,16 @@
+{
+    "feature_extraction__epoch_tmin": 1.9609547960774694,
+    "feature_extraction__freq_bands": {
+        "0": 7,
+        "1": 12,
+        "2": 30
+    },
+    "feature_extraction__n_per_seg": 230,
+    "model__learning_rate": 0.005,
+    "model__loss": "exponential",
+    "model__max_depth": 5,
+    "model__n_estimators": 896,
+    "preprocessing__do_laplacian": false,
+    "preprocessing__h_freq": 40,
+    "preprocessing__l_freq": 2
+}

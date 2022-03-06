@@ -6,14 +6,17 @@ from Marker import Marker
 import matplotlib.pyplot as plt
 
 raw, rec_params = load_recordings("David7")
+raw.load_data()
+raw.filter(1, 50)
+
 events = mne.find_events(raw)
-epochs = mne.Epochs(raw, events, Marker.all(), tmin=0, tmax=rec_params["trial_duration"], picks="data",
-                    baseline=(0, 0))
+epochs = mne.Epochs(raw, events, Marker.all(), tmax=rec_params["trial_duration"], picks="data", baseline=None)
 
 epochs.load_data()
-epochs.filter(7, 30)
-ica = ICA(n_components=10, max_iter='auto', random_state=97)
+ica = ICA(n_components=13, max_iter='auto', random_state=97)
 ica.fit(epochs)
 ica.plot_sources(epochs, show_scrollbars=False)
+ica.plot_components()
+ica.plot_properties(epochs, [0, 5, 7])
 plt.show()
 print()
