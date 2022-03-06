@@ -1,16 +1,11 @@
 import mne
 from Marker import Marker
-from preprocessing import Preprocessor, reject_epochs
-from features import FeatureExtractor
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.model_selection import RepeatedStratifiedKFold, cross_val_score
-from sklearn.pipeline import Pipeline
+from sklearn.model_selection import RepeatedStratifiedKFold, cross_validate
 import numpy as np
 from sklearn.model_selection import GridSearchCV
 from src.data_utils import load_recordings
-from sklearn.svm import SVC
 from skopt import BayesSearchCV
-from skopt.space import Real, Categorical, Integer
+from preprocessing import reject_epochs
 
 mne.set_log_level('warning')
 
@@ -23,44 +18,23 @@ DEFAULT_HYPERPARAMS = {
     "CSP__n_components": 5,
 }
 
+DEFAULT_HYPERPARAMS = {
+    "CSP__n_components": 9,
+    "preprocessing__epoch_tmin": 1.0754289498233596,
+    "preprocessing__h_freq": 19.20077778833017,
+    "preprocessing__l_freq": 10.10221743378826
+}
 
-def evaluate_pipeline(pipeline, epochs, labels, n_splits=5, n_repeats=10):
+
+def evaluate_pipeline(pipeline, epochs, labels, n_splits=5, n_repeats=5):
     print(f'Evaluating pipeline performance ({n_splits} splits, {n_repeats} repeats, {len(labels)} epochs)...')
-    skf = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats)
-    scores = cross_val_score(pipeline, epochs, labels, cv=skf)
+    results = cross_validate(pipeline, epochs, labels, cv=cross_validation(n_splits, n_repeats),
+                             return_train_score=True)
     print(
-        f'Accuracy: \n mean: {np.round(np.mean(scores), 2)} \n std: {np.round(np.std(scores), 3)}')
-    return np.round(np.mean(scores), 2)
-
-
-def create_and_fit_pipeline(raw, recording_params, hyperparams=DEFAULT_HYPERPARAMS,
-                            pipeline_type="spectral"):
-    # get data, epochs
-    epochs, labels = get_epochs(raw, recording_params["trial_duration"],
-                                reject_bad=not recording_params['use_synthetic_board'])
-    # create a pipeline from params
-    pipeline = create_pipeline(hyperparams, pipeline_type=pipeline_type)
-    pipeline.fit(epochs, labels)
-    return pipeline, epochs, labels
-
-
-def create_pipeline(hyperparams=DEFAULT_HYPERPARAMS, pipeline_type="spectral"):
-    if hyperparams is None:
-        hyperparams = DEFAULT_HYPERPARAMS
-    hyperparams = {**DEFAULT_HYPERPARAMS, **hyperparams}
-    lda = LinearDiscriminantAnalysis()
-    if pipeline_type == "spectral":
-        pipeline = Pipeline(
-            [('preprocessing', Preprocessor()), ('feature_extraction', FeatureExtractor()), ('lda', lda)])
-    elif pipeline_type == "csp":
-        pipeline = Pipeline([('preprocessing', Preprocessor()), ('CSP', mne.decoding.CSP()), ('lda', lda)])
-    else:
-        raise ValueError(f'Pipeline type {pipeline_type} is not supported')
-
-    print(f'Creating {pipeline_type} pipeline: {show_pipeline_steps(pipeline)}')
-    relevant_hyperparams = filter_hyperparams_for_pipeline(hyperparams, pipeline)
-    pipeline.set_params(**relevant_hyperparams)
-    return pipeline
+        f'\nTraining Accuracy: \n mean: {np.round(np.mean(results["train_score"]), 2)} \n std: {np.round(np.std(results["train_score"]), 3)}')
+    print(
+        f'\nTesting Accuracy: \n mean: {np.round(np.mean(results["test_score"]), 2)} \n std: {np.round(np.std(results["test_score"]), 3)}')
+    return np.round(np.mean(results["train_score"]), 2)
 
 
 def filter_hyperparams_for_pipeline(hyperparams, pipeline):
@@ -72,22 +46,19 @@ def show_pipeline_steps(pipeline):
     return " => ".join(list(pipeline.named_steps.keys()))
 
 
-def bayesian_opt(epochs, labels, pipeline_type):
-    pipeline = create_pipeline(pipeline_type=pipeline_type)
-    # log-uniform: understand as search over p = exp(x) by varying x
-    skf = RepeatedStratifiedKFold(n_splits=5, n_repeats=5)
+def cross_validation(n_splits=5, n_repeats=5):
+    return RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats)
 
+
+def bayesian_opt(epochs, labels, pipeline):
+    pipe = pipeline.create_pipeline()
     opt = BayesSearchCV(
-        pipeline,
-        {
-            "preprocessing__epoch_tmin": Real(0, 2),
-            "preprocessing__l_freq": Real(7, 14),
-            "preprocessing__h_freq": Real(15, 30),
-            "CSP__n_components": [7, 8, 9, 10, 11, 12],
-        },
+        pipe,
+        pipeline.bayesian_search_space,
         verbose=20,
-        n_iter=45,
-        cv=skf
+        n_iter=50,
+        cv=cross_validation(),
+        n_jobs=-1,
     )
 
     opt.fit(epochs, labels)
@@ -97,35 +68,33 @@ def bayesian_opt(epochs, labels, pipeline_type):
     return opt.best_params_
 
 
-def grid_search_pipeline_hyperparams(epochs, labels, pipeline_type):
-    pipeline = create_pipeline(pipeline_type=pipeline_type)
-    gridsearch_params = {
-        "preprocessing__epoch_tmin": [0, 0.2, 0.5, 0.7, 1, 1.5],
-        "preprocessing__l_freq": [3, 5, 7, 10],
-        "preprocessing__h_freq": [20, 24, 28, 30],
-        "feature_extraction__n_fft": [65, 130, 200, 250],
-        "feature_extraction__n_per_seg": [375 / 3, 375 / 5, 375 / 7],
-        "feature_extraction__freq_bands": [[8, 13, 30], [5, 10, 20, 40], [5, 10, 24]],
-        "CSP__n_components": [5, 6, 7, 8, 9],
-        # "lda__C": [0.1, 1, 10, 100],
-        # "lda__gamma": [1, 0.1, 0.01, 0.001],
-        # "lda__kernel": ['rbf', 'poly', 'sigmoid']
-    }
-    gridsearch_params = filter_hyperparams_for_pipeline(gridsearch_params, pipeline)
-    skf = RepeatedStratifiedKFold(n_splits=3, n_repeats=5)
-    mne.set_log_level(verbose="WARNING")
-    gs = GridSearchCV(pipeline, gridsearch_params, cv=skf, n_jobs=-1, verbose=10, error_score="raise")
-    mne.set_log_level(verbose="INFO")
+def grid_search_pipeline_hyperparams(epochs, labels, pipeline):
+    gs = GridSearchCV(pipeline.create_pipeline(), pipeline.grid_search_space, cv=cross_validation(), n_jobs=-1,
+                      verbose=10,
+                      error_score="raise")
     gs.fit(epochs, labels)
     print("Best parameter (CV score=%0.3f):" % gs.best_score_)
     print(gs.best_params_)
     return gs.best_params_
 
 
-def get_epochs(raw, trial_duration, markers=Marker.all(), reject_bad=True, on_missing='raise'):
-    events = mne.find_events(raw)
-    epochs = mne.Epochs(raw, events, markers, tmin=-1, tmax=trial_duration, picks="data", baseline=(-1, 0),
-                        on_missing=on_missing)
+def get_epochs(raws, trial_duration, calibration_duration, markers=[Marker.IDLE, Marker.LEFT, Marker.RIGHT],
+               reject_bad=False,
+               on_missing='raise'):
+    epochs_list = []
+    for raw in raws:
+        events = mne.find_events(raw)
+        epochs = mne.Epochs(raw, events, markers, tmin=-calibration_duration, tmax=trial_duration, picks="data",
+                            on_missing=on_missing, baseline=None)
+        epochs_list.append(epochs)
+    epochs = mne.concatenate_epochs(epochs_list)
+
+    # filt_epochs = epochs.copy().filter(l_freq=1., h_freq=None)
+    # ica = ICA(n_components=10, max_iter='auto', random_state=97)
+    # ica.fit(filt_epochs)
+    # ica.plot_sources(filt_epochs, show_scrollbars=False)
+    # ica.plot_components()
+    # plt.show()
 
     # running get data triggers dropping of epochs, we want to make sure this happens now so that the labels are
     # consistent with the epochs
@@ -133,12 +102,11 @@ def get_epochs(raw, trial_duration, markers=Marker.all(), reject_bad=True, on_mi
     labels = epochs.events[:, -1]
     print(f'Found {len(labels)} epochs')
 
-    if reject_bad:
-        epochs_data, labels = reject_epochs(epochs_data, labels)
+    # if reject_bad:
+    #     epochs_data, labels = reject_epochs(epochs_data, labels)
 
     return epochs_data, labels
 
 
 if __name__ == "__main__":
-    raw, params = load_recordings("Synthetic")
-    create_and_fit_pipeline(raw, params)
+    raw, params = load_recordings("Ori")

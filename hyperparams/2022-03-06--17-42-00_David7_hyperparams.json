@@ -1,0 +1,5 @@
+{
+    "feature_extraction__epoch_tmin": 1.7001044308068947,
+    "model__max_features": 12,
+    "preprocessing__do_laplacian": false
+}

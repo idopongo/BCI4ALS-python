@@ -9,6 +9,8 @@ import numpy as np
 import json
 from preprocessing import preprocess
 from data_utils import get_subject_rec_folders
+from spectral import Preprocessor
+from pipeline import get_epochs
 
 
 def create_and_save_plots(rec_folder_name, bad_electrodes=[]):
@@ -24,11 +26,13 @@ def create_and_save_plots(rec_folder_name, bad_electrodes=[]):
     fig_psd = create_psd_fig(raw)
     fig_psd.savefig(os.path.join(fig_path, "psd.png"))
 
+    epochs, _ = get_epochs(rec_params["trial_duration"], rec_params["calibration_duration"])
+
     electrodes = ["C3", "C4", "Cz"]
-    class_spectrogram_fig = create_class_spectrogram_fig(raw, rec_params["trial_duration"], electrodes)
+    class_spectrogram_fig = create_class_spectrogram_fig(epochs, rec_params["trial_duration"], electrodes)
     class_spectrogram_fig.savefig(os.path.join(fig_path, f'class_spectrogram_{"_".join(electrodes)}.png'))
 
-    class_psd_fig = create_class_psd_fig(raw, rec_params["trial_duration"], electrodes)
+    class_psd_fig = create_class_psd_fig(epochs, rec_params["trial_duration"], electrodes)
     class_psd_fig.savefig(os.path.join(fig_path, f'class_psd_{"_".join(electrodes)}.png'))
 
 
@@ -61,17 +65,17 @@ def load_raw(rec_folder_name):
     return raw, rec_params
 
 
-def calc_class_spectrogram(raw, trial_duration, cls_marker, chan, time_before_stim):
+def calc_class_spectrogram(epochs, cls_marker, chan):
     cls_epochs = mne.Epochs(raw, mne.find_events(raw), cls_marker, tmin=-time_before_stim, tmax=trial_duration,
                             picks=[chan])
     cls_epochs = cls_epochs.get_data().squeeze(axis=1)
 
     sfreq = raw.info['sfreq']
-    segments_per_second = 2
+    segments_per_second = 4
     fft_params = {
         "nperseg": int(sfreq / segments_per_second),
-        "noverlap": int(sfreq / segments_per_second) * 0.3,
-        "nfft": 256,
+        "noverlap": int(sfreq / segments_per_second) * 0.5,
+        "nfft": 512,
         "scaling": "density"
     }
 
@@ -94,11 +98,18 @@ def calc_class_psd(raw, trial_duration, cls_marker, chan):
     cls_epochs = cls_epochs.get_data().squeeze(axis=1)
     sfreq = raw.info['sfreq']
 
+    fft_params = {
+        'scaling': "density",
+        'nfft': 512,
+        'nperseg': 125,
+        'noverlap': 60
+    }
+
     # calculate the first fft
-    freq, avg_power = signal.welch(cls_epochs[0], sfreq, scaling="density")
+    freq, avg_power = signal.welch(cls_epochs[0], sfreq, **fft_params)
 
     for epoch in cls_epochs[1:]:
-        _, power = signal.welch(epoch, sfreq, scaling="density")
+        _, power = signal.welch(epoch, sfreq, **fft_params)
         avg_power += power / len(cls_epochs)
 
     freq_range = (7, 30)
@@ -123,13 +134,13 @@ def create_class_psd_fig(raw, trial_duration, electrodes):
     return fig
 
 
-def create_class_spectrogram_fig(raw, trial_duration, electrodes):
+def create_class_spectrogram_fig(epochs, trial_duration, electrodes):
     chans = [raw.info.ch_names.index(elec) for elec in electrodes]
     time_before_stim = 1
     fig, axs = plt.subplots(len(chans), len(Marker.all()), figsize=(22, 11))
-    for i, chan in enumerate(chans):
+    for i, elec in enumerate(electrodes):
         for j, cls in enumerate(Marker):
-            power, freq, time = calc_class_spectrogram(raw, trial_duration, cls, chan, time_before_stim)
+            power, freq, time = calc_class_spectrogram(epochs, trial_duration, cls, chan, time_before_stim)
             ax = axs[i, j]
             mesh = ax.pcolormesh(time, freq, 10 * np.log10(power), shading='auto', cmap="jet", )
             plt.colorbar(mesh, ax=ax)
@@ -148,4 +159,4 @@ def save_plots_for_subject(subject_name):
 
 
 if __name__ == "__main__":
-    save_plots_for_subject("Ido4")
+    save_plots_for_subject("David7")

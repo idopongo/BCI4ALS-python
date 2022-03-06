@@ -12,7 +12,7 @@ def main():
 
     # data
     raw, params = load_recordings(data_subject_name)
-    epochs, labels = get_epochs(raw, params["trial_duration"])
+    epochs, labels = get_epochs(raw, params["trial_duration"], params["calibration_duration"])
 
     # evaluate
     predictions = pipeline.predict(epochs)
@@ -39,7 +39,7 @@ def calculate_true_and_false_rates(conf_matrix):
         row = conf_matrix[i]
         total_num_true = sum(row)
         num_hits = row[i]
-        rates[i][0] = num_hits/total_num_true
+        rates[i][0] = num_hits / total_num_true
 
     # false positive
     for i in range(0, 3):
@@ -47,12 +47,10 @@ def calculate_true_and_false_rates(conf_matrix):
         num_hits = column[i]
         total_num_predictions = sum(column)
         num_false_pos = total_num_predictions - num_hits
-        rates[i][1] = num_false_pos/total_num_predictions
+        rates[i][1] = num_false_pos / total_num_predictions
 
     return rates
 
 
 if __name__ == "__main__":
     main()
-
-

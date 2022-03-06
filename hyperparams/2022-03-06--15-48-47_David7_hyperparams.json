@@ -1,0 +1,12 @@
+{
+    "feature_extraction__epoch_tmin": 2.4863786605497347,
+    "feature_extraction__freq_bands": {
+        "0": 7,
+        "1": 12,
+        "2": 20,
+        "3": 30
+    },
+    "feature_extraction__n_per_seg": 51,
+    "preprocessing__h_freq": 27.147874130999064,
+    "preprocessing__l_freq": 6.419952228871603
+}

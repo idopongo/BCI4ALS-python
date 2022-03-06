@@ -1,12 +1,10 @@
-import mne.io
 import numpy as np
 from Marker import Marker
 from board import Board
 
-from pipeline import get_epochs, create_pipeline, evaluate_pipeline
-from data_utils import load_rec_params, save_raw, load_pipeline, load_recordings, load_hyperparams
-from psychopy import visual, core, event, sound
-
+from pipeline import get_epochs, evaluate_pipeline
+from data_utils import load_rec_params, save_raw, load_hyperparams
+import spectral
 import os
 
 BG_COLOR = "black"
@@ -17,13 +15,7 @@ core = None
 event = None
 
 
-def record_data(rec_params, pipeline=None, live_retraining=False, epochs=None, labels=None):
-    raw = run_session(rec_params, pipeline, live_retraining, epochs=epochs, labels=labels)
-    folder_path = save_raw(raw, rec_params)
-    return raw
-
-
-def run_session(params, pipeline=None, live_retraining=False, epochs=None, labels=None):
+def run_session(params, retrain_pipeline=spectral, predict_pipeline=None, epochs=None, labels=None):
     """
     Run a recording session, if pipeline is passed display prediction after every epoch
     """
@@ -42,8 +34,11 @@ def run_session(params, pipeline=None, live_retraining=False, epochs=None, label
     msg1 = f'Hello {params["subject"]}!\n Hit any key to start, press Esc at any point to exit'
     loop_through_messages(win, [msg1])
 
-    best_score = 0
-    hyperparams = load_hyperparams(params["subject"], pipeline_type="csp")
+    if retrain_pipeline:
+        hyperparams = load_hyperparams(params["subject"])
+        predict_pipeline = retrain_pipeline.create_pipeline(hyperparams)
+        predict_pipeline.fit(epochs, labels)
+        best_score = evaluate_pipeline(predict_pipeline, epochs, labels)
 
     # Start recording
     with Board(use_synthetic=params["use_synthetic_board"]) as board:
@@ -58,7 +53,7 @@ def run_session(params, pipeline=None, live_retraining=False, epochs=None, label
             board.insert_marker(marker)
             show_stim_with_beeps(win, marker_stim(win, marker), params["trial_duration"])
 
-            if pipeline:
+            if predict_pipeline:
                 # We need to wait a short time between the end of the trial and trying to get it's data to make sure
                 # that we have recorded (trial_duration * sfreq) samples after the latest marker (otherwise the epoch
                 # will be too short)
@@ -66,37 +61,38 @@ def run_session(params, pipeline=None, live_retraining=False, epochs=None, label
 
                 # get latest epoch and make prediction
                 raw = board.get_data()
-                new_epochs, new_labels = get_epochs(raw, params["trial_duration"], on_missing='ignore')
-                prediction = pipeline.predict(new_epochs)[-1]
+                new_epochs, new_labels = get_epochs([raw], params["trial_duration"], params["calibration_duration"],
+                                                    on_missing='ignore')
+                prediction = predict_pipeline.predict(new_epochs)[-1]
 
                 # display prediction result
                 show_stim_for_duration(win, classification_result_txt(win, marker, prediction),
                                        classification_result_sound(marker, prediction),
                                        params["display_online_result_duration"])
 
-            if live_retraining and i % params["retrain_num"] == 0:
+            if retrain_pipeline and i % params["retrain_num"] == 0 and i != 0:
                 text_stim(win, "Retraining model, please wait...").draw()
                 win.flip()
 
                 # train new pipeline
                 total_epochs = np.concatenate((epochs, new_epochs), axis=0)
                 total_labels = np.concatenate((labels, new_labels), axis=0)
-                new_pipeline = create_pipeline(hyperparams=hyperparams, pipeline_type="csp")
+                new_pipeline = retrain_pipeline.create_pipeline(hyperparams)
                 new_pipeline.fit(total_epochs, total_labels)
 
                 # evaluate new pipeline
                 score = evaluate_pipeline(new_pipeline, total_epochs, total_labels)
                 msg = f'Finished retraining \nold model score: {best_score} \nnew model score: {score}'
                 win.flip()
-                pipeline = new_pipeline
+                predict_pipeline = new_pipeline
 
-                # If new pipeline is better, it becomes the next pipeline.
                 if score > best_score:
                     best_score = score
                     msg += "\nNice! the model has improved!"
                 else:
                     msg += "\nNo improvement, Focus man.."
                 msg += "\n Press any key to continue, ESC to exit"
+
                 text_stim(win, msg).draw()
                 win.flip()
                 keys_pressed = event.waitKeys()
@@ -105,7 +101,8 @@ def run_session(params, pipeline=None, live_retraining=False, epochs=None, label
 
         core.wait(0.5)
         win.close()
-        return board.get_data()
+        raw = board.get_data()
+    save_raw(raw, rec_params)
 
 
 def loop_through_messages(win, messages):
@@ -190,9 +187,7 @@ def classification_result_txt(win, marker, prediction):
 def marker_image(win, marker):
     return visual.ImageStim(win=win, image=Marker(marker).image_path, units="norm", size=2, color=(1, 1, 1))
 
-# if __name__ == "__main__":
-# raw, rec_params = load_rec ordings("Synthetic")
-# epochs, labels = get_epochs(raw, rec_params["trial_duration"])
-# pipeline = create_pipeline_for_subject("David5", pipeline_type="csp")
-# rec_params = load_rec_params()
-# record_data(rec_params, pipeline=pipeline, live_retraining=True, epochs=epochs, labels=labels)
+
+if __name__ == "__main__":
+    rec_params = load_rec_params()
+    record_data(rec_params)

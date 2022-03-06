@@ -14,27 +14,6 @@ LAPLACIAN = {EEG_CHAN_NAMES.index(key): [EEG_CHAN_NAMES.index(chan) for chan in 
              LAPLACIAN.items()}
 
 
-class Preprocessor:
-    def __init__(self):
-        self.epoch_tmin = 1
-        self.l_freq = 7
-        self.h_freq = 30
-
-    def set_params(self, epoch_tmin, l_freq, h_freq):
-        self.epoch_tmin = epoch_tmin
-        self.l_freq = l_freq
-        self.h_freq = h_freq
-
-    def fit(self, data, labels):
-        return self
-
-    def transform(self, epochs):
-        epochs = mne.filter.filter_data(epochs, 125, self.l_freq, self.h_freq, verbose=False)
-        epochs = epochs[:, :, int(125 * self.epoch_tmin):]
-        epochs = laplacian(epochs)
-        return epochs
-
-
 def laplacian(epochs):
     filtered_epochs = np.copy(epochs)
     for chan, adjacent_chans in LAPLACIAN.items():
