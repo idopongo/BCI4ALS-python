@@ -13,6 +13,7 @@ def main():
     # data
     raw, params = load_recordings(data_subject_name)
     epochs, labels = get_epochs(raw, params["trial_duration"], params["calibration_duration"])
+    epochs = epochs.get_data()
 
     # evaluate
     predictions = pipeline.predict(epochs)
