@@ -92,15 +92,17 @@ def load_pipeline(subj):
     return pickle_load(load_path)
 
 
-def save_hyperparams(hyperparams, subject):
-    save_path = os.path.join(HYPERPARAMS_DIR, f'{now_datestring()}_{subject}_hyperparams.json')
+def save_hyperparams(hyperparams, subject, pipeline):
+    save_path = os.path.join(HYPERPARAMS_DIR, f'{now_datestring()}_{pipeline}_{subject}_hyperparams.json')
     json_dump(hyperparams, save_path)
 
 
-def load_hyperparams(subject):
-    print(f'Loading hyperparams for subject {subject}...')
+def load_hyperparams(subject, pipeline):
+    print(f'Loading hyperparams for subject {subject} and pipeline {pipeline}...')
     all_hyperparams = os.listdir(HYPERPARAMS_DIR)
-    subj_hyperparams = sorted([p for p in all_hyperparams if p.split("_")[1] == subject])
+    subj_hyperparams = sorted(
+        [p for p in all_hyperparams if (p.split("_")[1] == subject and p.split("_")[2] == pipeline)]
+    )
 
     if len(subj_hyperparams) == 0:
         print(f'No hyperparams found for subject {subject}')

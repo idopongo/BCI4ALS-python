@@ -63,6 +63,7 @@ def run_session(params, retrain_pipeline=spectral, predict_pipeline=None, epochs
                 raw = board.get_data()
                 new_epochs, new_labels = get_epochs([raw], params["trial_duration"], params["calibration_duration"],
                                                     on_missing='ignore')
+                new_epochs = new_epochs.get_data()
                 prediction = predict_pipeline.predict(new_epochs)[-1]
 
                 # display prediction result

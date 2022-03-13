@@ -5,31 +5,14 @@ import numpy as np
 from sklearn.model_selection import GridSearchCV
 from src.data_utils import load_recordings
 from skopt import BayesSearchCV
-from preprocessing import reject_epochs
 
 mne.set_log_level('warning')
 
-DEFAULT_HYPERPARAMS = {
-    "preprocessing__epoch_tmin": 0.1,
-    "preprocessing__l_freq": 2,
-    "preprocessing__h_freq": 24,
-    "feature_extraction__n_fft": 125,
-    "feature_extraction__n_per_seg": 100,
-    "CSP__n_components": 5,
-}
 
-DEFAULT_HYPERPARAMS = {
-    "CSP__n_components": 9,
-    "preprocessing__epoch_tmin": 1.0754289498233596,
-    "preprocessing__h_freq": 19.20077778833017,
-    "preprocessing__l_freq": 10.10221743378826
-}
-
-
-def evaluate_pipeline(pipeline, epochs, labels, n_splits=5, n_repeats=5):
+def evaluate_pipeline(pipeline, epochs, labels, n_splits=10, n_repeats=1):
     print(f'Evaluating pipeline performance ({n_splits} splits, {n_repeats} repeats, {len(labels)} epochs)...')
     results = cross_validate(pipeline, epochs, labels, cv=cross_validation(n_splits, n_repeats),
-                             return_train_score=True)
+                             return_train_score=True, n_jobs=-1)
     print(
         f'\nTraining Accuracy: \n mean: {np.round(np.mean(results["train_score"]), 2)} \n std: {np.round(np.std(results["train_score"]), 3)}')
     print(
@@ -46,7 +29,7 @@ def show_pipeline_steps(pipeline):
     return " => ".join(list(pipeline.named_steps.keys()))
 
 
-def cross_validation(n_splits=5, n_repeats=5):
+def cross_validation(n_splits=10, n_repeats=1):
     return RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats)
 
 
@@ -56,7 +39,7 @@ def bayesian_opt(epochs, labels, pipeline):
         pipe,
         pipeline.bayesian_search_space,
         verbose=20,
-        n_iter=50,
+        n_iter=5,
         cv=cross_validation(),
         n_jobs=-1,
     )
@@ -65,7 +48,7 @@ def bayesian_opt(epochs, labels, pipeline):
 
     print("Best parameter (CV score=%0.3f):" % opt.best_score_)
     print(opt.best_params_)
-    return opt.best_params_
+    return opt.best_params_, opt.best_score_, opt.cv_results_["std_test_score"][opt.best_index_]
 
 
 def grid_search_pipeline_hyperparams(epochs, labels, pipeline):
@@ -81,31 +64,25 @@ def grid_search_pipeline_hyperparams(epochs, labels, pipeline):
 def get_epochs(raws, trial_duration, calibration_duration, markers=[Marker.IDLE, Marker.LEFT, Marker.RIGHT],
                reject_bad=False,
                on_missing='raise'):
+    reject_criteria = dict(eeg=100e-6)  # 100 µV
+    flat_criteria = dict(eeg=1e-6)  # 1 µV
+
     epochs_list = []
     for raw in raws:
         events = mne.find_events(raw)
+
         epochs = mne.Epochs(raw, events, markers, tmin=-calibration_duration, tmax=trial_duration, picks="data",
-                            on_missing=on_missing, baseline=None)
+                            on_missing=on_missing, baseline=None, reject=reject_criteria, flat=flat_criteria)
         epochs_list.append(epochs)
     epochs = mne.concatenate_epochs(epochs_list)
 
-    # filt_epochs = epochs.copy().filter(l_freq=1., h_freq=None)
-    # ica = ICA(n_components=10, max_iter='auto', random_state=97)
-    # ica.fit(filt_epochs)
-    # ica.plot_sources(filt_epochs, show_scrollbars=False)
-    # ica.plot_components()
-    # plt.show()
-
     # running get data triggers dropping of epochs, we want to make sure this happens now so that the labels are
     # consistent with the epochs
-    epochs_data = epochs.get_data()
+    epochs.get_data()
     labels = epochs.events[:, -1]
     print(f'Found {len(labels)} epochs')
 
-    # if reject_bad:
-    #     epochs_data, labels = reject_epochs(epochs_data, labels)
-
-    return epochs_data, labels
+    return epochs, labels
 
 
 if __name__ == "__main__":
