@@ -1,0 +1,7 @@
+{
+  "preprocessing__epoch_tmin": 1,
+  "preprocessing__l_freq": 3,
+  "preprocessing__h_freq": 24,
+  "preprocessing__do_laplacian": true,
+  "csp__n_components": 8
+}
