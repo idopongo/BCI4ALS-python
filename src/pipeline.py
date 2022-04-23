@@ -3,7 +3,7 @@ from Marker import Marker
 from sklearn.model_selection import RepeatedStratifiedKFold, cross_validate
 import numpy as np
 from sklearn.model_selection import GridSearchCV
-from src.data_utils import load_recordings
+from data_utils import load_recordings
 from skopt import BayesSearchCV
 
 mne.set_log_level('warning')

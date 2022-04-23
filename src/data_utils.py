@@ -1,7 +1,7 @@
 import os
 import json
 import datetime
-from src.constants import *
+from constants import *
 from pathlib import Path
 from tkfilebrowser import askopendirnames
 import mne
