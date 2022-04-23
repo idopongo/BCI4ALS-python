@@ -1,6 +1,0 @@
-{
-    "CSP__n_components": 5,
-    "preprocessing__epoch_tmin": 0.1,
-    "preprocessing__h_freq": 28,
-    "preprocessing__l_freq": 2
-}

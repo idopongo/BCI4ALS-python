@@ -1,0 +1,9 @@
+{
+    "feature_extraction__epoch_tmin": 1.0002193852082097,
+    "feature_extraction__freq_bands": {
+        "0": 7,
+        "1": 12,
+        "2": 20
+    },
+    "preprocessing__do_laplacian": false
+}
