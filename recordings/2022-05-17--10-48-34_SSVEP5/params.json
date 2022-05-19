@@ -1,0 +1,13 @@
+{
+    "use_synthetic_board": false,
+    "full_screen": true,
+    "subject": "SSVEP5",
+    "trial_duration": 5,
+    "trials_per_stim": 5,
+    "get_ready_duration": 2,
+    "calibration_duration": 1,
+    "display_online_result_duration": 2,
+    "retrain_num": 10,
+    "left_freq": 7,
+    "right_freq": 12
+}
