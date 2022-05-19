@@ -16,7 +16,7 @@ def health_check():
         ax = create_figure(len(board.eeg_channels))
         chan_plots = plot_chans(board.channel_names, window_size, ax)
         montage_plot, chan_error_texts = plot_montage(board.channel_names, ax["upright"])
-        psd_plots = plot_psd(ax["downright"], board.channel_names)
+        psd_plots = plot_psd(ax["upright"], board.channel_names)
         while True:
             data = get_next_data(board, window_size)
             fs = board.sfreq
@@ -43,7 +43,9 @@ def plot_psd(ax, chan_names):
 
 
 def update_psd_plot(psd_plots, data, sfreq):
+    pass
     for plot, chan in zip(psd_plots, data):
+        # print("Plot {p} and Chan {c}".format(p=plot, c=chan))
         freq, power = scipy.signal.welch(chan, sfreq, nperseg=sfreq, scaling="density")
         plot.set_data(freq, 10 * np.log10(power))
 
@@ -54,7 +56,7 @@ def on_press(event):
 
 
 def create_figure(num_chans):
-    scale_num = 2 / 3
+    scale_num = 1 / 3
     fig, ax = plt.subplot_mosaic(
         [[i, "upright"] if 0 <= i < scale_num * num_chans else [i, "downright"] for i in range(num_chans)])
     fig.subplots_adjust(left=0.1)
