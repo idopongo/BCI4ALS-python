@@ -25,7 +25,7 @@ class Preprocessor:
     def __init__(self):
         self.l_freq = 7
         self.h_freq = 30
-        self.do_laplacian = True
+        self.do_laplacian = False
 
     def set_params(self, l_freq=None, h_freq=None, do_laplacian=None):
         if l_freq is not None:
@@ -73,16 +73,17 @@ class FeatureExtractor:
     def transform(self, epochs):
         features = np.zeros((epochs.shape[0], 0))
         freq_bands = {}
-        if self.params["freq_1"]:
-            freq_bands["1"] = all_freq_bands["1"]
-        if self.params["freq_2"]:
-            freq_bands["2"] = all_freq_bands["2"]
-        if self.params["freq_3"]:
-            freq_bands["3"] = all_freq_bands["3"]
-        if self.params["freq_4"]:
-            freq_bands["4"] = all_freq_bands["4"]
-        if self.params["freq_5"]:
-            freq_bands["5"] = all_freq_bands["5"]
+        if "freq_1" in self.params:
+            if self.params["freq_1"]:
+                freq_bands["1"] = all_freq_bands["1"]
+            if self.params["freq_2"]:
+                freq_bands["2"] = all_freq_bands["2"]
+            if self.params["freq_3"]:
+                freq_bands["3"] = all_freq_bands["3"]
+            if self.params["freq_4"]:
+                freq_bands["4"] = all_freq_bands["4"]
+            if self.params["freq_5"]:
+                freq_bands["5"] = all_freq_bands["5"]
         if not freq_bands:
             freq_bands = {
                 "1": [0, 2]
@@ -179,21 +180,25 @@ bayesian_search_space = {
 
 def create_pipeline(hyperparams=None, model=LinearDiscriminantAnalysis):
     default_hyperparams = {
-        "preprocessing__l_freq": 6,
-        "preprocessing__h_freq": 30,
+        "preprocessing__l_freq": 2,
+        "preprocessing__h_freq": 15,
         "preprocessing__do_laplacian": False,
         "feature_extraction__epoch_tmin": 1.9,
         "feature_extraction__freq_bands": all_freq_bands,
     }
+    print("111 {h}  {d}".format(h=hyperparams, d=default_hyperparams))
 
     if hyperparams:
         hyperparams = {**default_hyperparams, **hyperparams}
     else:
         print("no hyperparams passed, using default")
+        print("222 {h}".format(h=hyperparams))
         hyperparams = default_hyperparams
+        print("333 {h} {d}".format(h=hyperparams, d=default_hyperparams))
 
     pipeline = Pipeline(
         [('preprocessing', Preprocessor()), ('feature_extraction', FeatureExtractor()), ('model', model())])
+    print("Hyper - {h}".format(h=hyperparams))
     hyperparams = filter_hyperparams_for_pipeline(hyperparams, pipeline)
     print("Creating pipeline with hyperparams")
     pipeline.set_params(**hyperparams)

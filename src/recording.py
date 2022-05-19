@@ -1,6 +1,7 @@
 import numpy as np
 from Marker import Marker
 from board import Board
+from psychopy import sound
 
 from pipeline import get_epochs, evaluate_pipeline
 from data_utils import load_rec_params, save_raw, load_hyperparams
@@ -35,7 +36,7 @@ def run_session(params, retrain_pipeline=spectral, predict_pipeline=None, epochs
     loop_through_messages(win, [msg1])
 
     if retrain_pipeline:
-        hyperparams = load_hyperparams(params["subject"])
+        hyperparams = load_hyperparams(params["subject"], retrain_pipeline)
         predict_pipeline = retrain_pipeline.create_pipeline(hyperparams)
         predict_pipeline.fit(epochs, labels)
         best_score = evaluate_pipeline(predict_pipeline, epochs, labels)
@@ -103,7 +104,7 @@ def run_session(params, retrain_pipeline=spectral, predict_pipeline=None, epochs
         core.wait(0.5)
         win.close()
         raw = board.get_data()
-    save_raw(raw, rec_params)
+    save_raw(raw, params)
 
 
 def loop_through_messages(win, messages):
@@ -191,4 +192,4 @@ def marker_image(win, marker):
 
 if __name__ == "__main__":
     rec_params = load_rec_params()
-    record_data(rec_params)
+    run_session(rec_params)

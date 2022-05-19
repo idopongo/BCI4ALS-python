@@ -11,7 +11,7 @@ from preprocessing import preprocess
 from data_utils import get_subject_rec_folders, load_recordings
 from pipeline import get_epochs
 
-FREQ_RANGE = (6, 30)
+FREQ_RANGE = (2, 20)
 
 
 def create_and_save_plots(rec_folder_name, bad_electrodes=[]):
@@ -47,10 +47,10 @@ def create_plots_for_subject(subject):
     save_folder = f'../figures/{subject}'
     Path(save_folder).mkdir(exist_ok=True)
 
-    electrodes = ["FC1", "FC2", "FC5", "FC6", "CP1", "CP2"]
+    # electrodes = ["FC1", "FC2", "FC5", "FC6", "CP1", "CP2"]
+    electrodes = ["O1", "O2"]
     class_spectrogram_fig = create_class_spectrogram_fig(epochs, electrodes, rec_params["calibration_duration"])
-    class_spectrogram_fig.savefig(
-        os.path.join(save_folder, f'class_spectrogram_{"_".join(electrodes)}.png'))
+    class_spectrogram_fig.savefig(os.path.join(save_folder, f'class_spectrogram_{"_".join(electrodes)}.png'))
     class_psd_fig = create_class_psd_fig(epochs, electrodes, rec_params["trial_duration"],
                                          rec_params["calibration_duration"])
     class_psd_fig.savefig(os.path.join(save_folder, f'class_psd_{"_".join(electrodes)}.png'))
@@ -128,18 +128,27 @@ def calc_average_psd(epochs, sfreq):
 
 def create_class_psd_fig(epochs, electrodes, trial_duration, calibration_period):
     channels = [epochs.info.ch_names.index(elec) for elec in electrodes]
-    fig, axs = plt.subplots(len(channels), len(Marker.all()), figsize=(22, 11))
+    fig, axs = plt.subplots(len(channels), 1, figsize=(22, 11))
     epochs.crop(tmin=1.1)  # remove calibration period
+    power_list = []
+    freq_list = []
     for i, electrode in enumerate(electrodes):
         for j, cls in enumerate(Marker):
             cls_chan_epochs = epochs[str(cls.value)].pick_channels([electrode]).get_data().squeeze(axis=1)
             power, freq = calc_average_psd(cls_chan_epochs, epochs.info["sfreq"])
-            ax = axs[i, j]
-            ax.plot(freq, power)
-            ax.set_ylabel('Power Density')
-            ax.set_xlabel('Frequency [Hz]')
-            ax.set_title(f'{cls.name} {electrode}')
-            ax.set_xticks(np.arange(FREQ_RANGE[0], FREQ_RANGE[1] + 1, 2))
+            power_list.append(power)
+            freq_list.append(freq)
+        ax = axs[i]
+        for k, cls in enumerate(Marker):
+            ax.plot(freq_list[k], power_list[k], label=cls.name)
+        ax.set_ylabel('Power Density', fontsize=16)
+        ax.set_xlabel('Frequency [Hz]', fontsize=16)
+        ax.set_title(f'{electrode}', fontsize=16)
+        ax.set_xticks(np.arange(FREQ_RANGE[0], FREQ_RANGE[1] + 1, 2))
+        leg = ax.legend(prop={'size': 16})
+
+        power_list = []
+        freq_list = []
 
     fig.tight_layout()
     return fig
@@ -170,4 +179,4 @@ def save_plots_for_subject(subject_name):
 
 if __name__ == "__main__":
     plt.ioff()  # don't display plots while creating them
-    create_plots_for_subject("David7")
+    create_plots_for_subject("SSVEP5")

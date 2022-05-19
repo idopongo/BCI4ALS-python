@@ -4,14 +4,15 @@ import numpy as np
 from board import EEG_CHAN_NAMES
 import scipy.stats
 
-LAPLACIAN = {
-    "C3": ["FC5", "FC1", "CP5", "CP1"],
-    "Cz": ["FC1", "FC2", "CP1", "CP2"],
-    "C4": ["FC2", "FC6", "CP2", "CP6"]
-}
 
-LAPLACIAN = {EEG_CHAN_NAMES.index(key): [EEG_CHAN_NAMES.index(chan) for chan in value] for key, value in
-             LAPLACIAN.items()}
+# LAPLACIAN = {
+#     "C3": ["FC5", "FC1", "CP5", "CP1"],
+#     "Cz": ["FC1", "FC2", "CP1", "CP2"],
+#     "C4": ["FC2", "FC6", "CP2", "CP6"]
+# }
+#
+# LAPLACIAN = {EEG_CHAN_NAMES.index(key): [EEG_CHAN_NAMES.index(chan) for chan in value] for key, value in
+#              LAPLACIAN.items()}
 
 
 def laplacian(epochs):
@@ -23,7 +24,7 @@ def laplacian(epochs):
 
 def preprocess(raw):
     raw.load_data()
-    raw.filter(7, 30)
+    raw.filter(2, 30)
     return raw
 
 

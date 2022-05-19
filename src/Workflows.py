@@ -5,6 +5,7 @@ from sklearn.model_selection import RepeatedStratifiedKFold
 from skopt import BayesSearchCV
 from skopt.space import Categorical, Integer, Real
 
+from src.figures import create_plots_for_subject
 from recording import run_session
 from pipeline import evaluate_pipeline, get_epochs, bayesian_opt
 from data_utils import load_recordings, load_hyperparams, save_hyperparams, load_rec_params
@@ -46,9 +47,16 @@ models = [
 
 def record_and_create_pipeline(pipeline=spectral):
     rec_params = load_rec_params()
-    run_session(rec_params)
+    run_session(rec_params, retrain_pipeline=None)
     create_pipeline_for_subject(rec_params["subject"], pipeline)
     return pipeline
+
+
+def record_and_figure():
+    rec_params = load_rec_params()
+    run_session(rec_params, retrain_pipeline=None)
+    # plt.ioff()  # don't display plots while creating them
+    create_plots_for_subject(rec_params['subject'])
 
 
 def create_pipeline_for_subject(subject, pipeline=spectral, choose=False):
@@ -62,7 +70,7 @@ def create_pipeline_for_subject(subject, pipeline=spectral, choose=False):
     pipe = pipeline.create_pipeline(hyperparams)
     pipe.fit(epochs, labels)
 
-    evaluate_pipeline(pipe, epochs, labels)
+    # evaluate_pipeline(pipe, epochs, labels)
     return pipe
 
 
@@ -119,9 +127,11 @@ def load_epochs_for_subject(subject, choose=False):
 
 
 if __name__ == "__main__":
+    # record_and_create_pipeline()
+    record_and_figure()
     # find_best_hyperparams_for_subject("David7", pipeline=spectral)
     # find_best_pipeline_for_subject("David7", spectral)
     # epochs, labels = load_epochs_for_subject("David8")
     # pred = pipeline.predict(epochs)
     # print(sklearn.metrics.accuracy_score(labels, pred, normalize=True))
-    create_pipeline_for_subject("David7", pipeline=csp)
+    # create_pipeline_for_subject("David7", pipeline=csp)
