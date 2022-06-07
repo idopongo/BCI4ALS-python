@@ -366,7 +366,7 @@ class SSVEP:
                     #self.epoch(self.freq)
                     self.epoch(70)
                     self.mywin.flip()
-                
+
                 self.epoch(0)
                 self.should_tag = True
                 """
